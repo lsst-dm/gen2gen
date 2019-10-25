@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+
+import yaml
+import types
+import os
+import argparse
+
+
+class DC2generator:
+
+    """ A class to generate LSST Gen2 scipts"""
+
+    def __init__(self, **keys):
+
+        # Load the configurarion
+        self.config = types.SimpleNamespace(**keys)
+
+        # Read in yaml dataset conf manifest
+        self.load_dataset()
+
+        # Read in yaml templates conf manifest
+        self.load_templates()
+
+        # Define rerun
+        self.rerun = self.config.rerun
+
+        # And the outpath
+        self.filepath = self.config.filepath.format(week=self.config.week, DMticket=self.config.DMticket)
+        if not os.path.exists(self.filepath):
+            os.makedirs(self.filepath)
+            print(f"# Created dirname:{self.filepath}")
+
+    def load_dataset(self):
+        # Load up the manifest
+        with open(self.config.dataset) as f:
+            self.data = yaml.load(f, Loader=yaml.FullLoader)
+        self.visits_all = self.data['visits']['all']
+        print(f"# Loaded dataset definitions from: {self.config.dataset}")
+
+        # ----------------------------------------------
+        # In case we want to use the visits from coadd
+        # However the images per filter for coadd don't match the total number
+        # of visits
+        self.visits_tracts = []
+        for tract in self.data['visits'].keys():
+            if tract == 'all':
+                continue
+            for filter in self.data['visits'][tract].keys():
+                self.visits_tracts.extend(self.data['visits'][tract][filter])
+                print(f"{filter}, {len(self.data['visits'][tract][filter])}")
+        # ----------------------------------------------
+        self.nvisits = len(self.visits_tracts)
+        print(f"# Loaded {self.nvisits} visits")
+
+    def get_visit_str(self, tract, filter):
+        # get the visit in the format we need
+        visit_str = "^".join([str(i) for i in self.data['visits'][tract][filter]])
+        return visit_str
+
+    def get_filter_str(self, tract):
+        # get the filter in the format we need
+        filter_str = "^".join([str(i) for i in self.data['visits'][tract]])
+        return filter_str
+
+    def load_templates(self):
+        # Load up the manifest
+        with open(self.config.templates) as f:
+            self.templates = yaml.load(f, Loader=yaml.FullLoader)
+        print(f"# Loaded dataset templates from: {self.config.templates}")
+
+    def task_filename_task(self, task, ext=''):
+        index = self.templates['tasks_to_execute_ordered'].index(task) + 1
+        name = os.path.join(self.filepath, f"{index:02d}_{task}{ext}")
+        return name
+
+    def task_per_task(self, task, ext=''):
+
+        """ Format task per rerun/task only """
+        outfile = self.task_filename_task(task, ext=ext)
+        out = open(outfile, "w")
+        out.write(self.templates['setup'].format(week=self.config.week))
+        out.write(self.templates['templates'][task].format(rerun=self.rerun,
+                                                           weeknumber=self.config.weeknumber))
+        out.close()
+        print(f"# file: {outfile} is ready")
+
+    def task_per_visit_all(self, task, nvisit=20, ext=''):
+
+        """ Format a task with all visits """
+
+        outfile = self.task_filename_task(task, ext=ext)
+        out = open(outfile, "w")
+        out.write(self.templates['setup'].format(week=self.config.week))
+        # Get the chunks per slice:
+        set_of_visits = get_chunks(self.data['visits']['all'], nvisit)
+        for chunk in set_of_visits:
+            visit_str = get_list_str(chunk)
+            kw = {'rerun': self.rerun, 'visit': visit_str, 'jobname': self.config.jobname}
+            if task in self.templates['tasks_specs']:
+                kw.update(self.templates['tasks_specs'][task])
+            out.write(self.templates['templates'][task].format(**kw))
+        out.close()
+        print(f"# file: {outfile} is ready")
+
+    def task_per_visit_tracts(self, task, nvisit=20, ext=''):
+
+        """ Format a task with visits per tract """
+
+        outfile = self.task_filename_task(task, ext=ext)
+        out = open(outfile, "w")
+        out.write(self.templates['setup'].format(week=self.config.week))
+        # Get the chunks per slice:
+        set_of_visits = get_chunks(self.visits_tracts, nvisit)
+        for chunk in set_of_visits:
+            visit_str = get_list_str(chunk)
+            kw = {'rerun': self.rerun, 'visit': visit_str, 'jobname': self.config.jobname}
+            if task in self.templates['tasks_specs']:
+                kw.update(self.templates['tasks_specs'][task])
+            out.write(self.templates['templates'][task].format(**kw))
+        out.close()
+        print(f"# file: {outfile} is ready")
+
+    def task_per_tract_filter(self, task, ext=''):
+
+        """ Format a task per tract and filter"""
+
+        outfile = None
+        head_task = False
+        head_tract = False
+        kw = {'rerun': self.rerun, 'week': self.config.week}
+
+        # Head per rerun
+        if 'head_task' in self.templates['templates'][task]:
+            outfile = self.task_filename_task(task, ext=ext)
+            out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['head_task'].format(**kw))
+            out.write(self.templates['setup'].format(week=self.config.week))
+            head_task = True
+
+        for tract in self.data['visits'].keys():
+
+            if tract == 'all':
+                print(f"# Skipping tract: {tract}")
+                continue
+
+            # Head per tract
+            if 'head_tract' in self.templates['templates'][task]:
+                outfile = self.task_filename_tract(task, tract, ext=ext)
+                out = open(outfile, "w")
+                kw.update({'tract': tract})
+                out.write(self.templates['templates'][task]['head_tract'].format(**kw))
+                head_tract = True
+
+            for filter in self.data['visits'][tract].keys():
+
+                if not head_task and not head_tract:
+                    outfile = self.task_filename_tract(task, tract, ext=ext)
+                    out = open(outfile, "w")
+
+                # get the visit in the format we need
+                visit = self.get_visit_str(tract, filter)
+                kw.update({'visit': visit, 'filter': filter, 'tract': tract})
+                if task in self.templates['tasks_specs']:
+                    kw.update(self.templates['tasks_specs'][task][tract])
+
+                if 'multi' in self.templates['templates'][task]:
+                    out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+                else:
+                    out.write(self.templates['templates'][task].format(**kw) + '\n')
+
+                # close file per filter
+                if not head_task and not head_tract:
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+
+            # Out the loop print
+            if 'no_loop' in self.templates['templates'][task]:
+                out.write(self.templates['templates'][task]['no_loop'].format(**kw))
+
+            # close file accordingly by tract
+            if head_tract:
+                out.close()
+                print(f"# file: {outfile} is ready")
+
+        if 'head_task':
+            out.close()
+            print(f"# file: {outfile} is ready")
+
+    def task_per_tract_patch(self, task, ext=''):
+
+        """ Format a task per tract and filter"""
+
+        filter_str = get_list_str(self.data['filters'])
+        outfile = None
+        head_task = False
+        head_tract = False
+        kw = {'rerun': self.rerun, 'week': self.config.week, 'filter_str': filter_str}
+
+        # Head per rerun
+        if 'head_task' in self.templates['templates'][task]:
+            outfile = self.task_filename_task(task, ext=ext)
+            out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['head_task'].format(**kw))
+            out.write(self.templates['setup'].format(week=self.config.week))
+            head_task = True
+
+        for tract in self.data['patches'].keys():
+
+            if tract == 'all':
+                print(f"# Skipping tract: {tract}")
+                continue
+
+            # Head per tract
+            if 'head_tract' in self.templates['templates'][task]:
+                outfile = self.task_filename_tract(task, tract, ext=ext)
+                out = open(outfile, "w")
+                kw.update({'tract': tract})
+                out.write(self.templates['templates'][task]['head_tract'].format(**kw))
+                head_tract = True
+
+            for patch in self.data['patches'][tract]:
+
+                if not head_task and not head_tract:
+                    outfile = self.task_filename_tract(task, tract, ext=ext)
+                    out = open(outfile, "w")
+
+                # get the visit in the format we need
+                patch_alt = f"{patch[0]},{patch[1]}"
+                kw.update({'tract': tract, 'patch': patch, 'patch_alt': patch_alt})
+                if task in self.templates['tasks_specs']:
+                    kw.update(self.templates['tasks_specs'][task][tract])
+
+                if 'multi' in self.templates['templates'][task]:
+                    out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+                else:
+                    out.write(self.templates['templates'][task].format(**kw) + '\n')
+
+                # close file per filter
+                if not head_task and not head_tract:
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+
+            # Out the loop print
+            if 'no_loop' in self.templates['templates'][task]:
+                out.write(self.templates['templates'][task]['no_loop'].format(**kw))
+
+            # close file accordingly by tract
+            if head_tract:
+                out.close()
+                print(f"# file: {outfile} is ready")
+
+        if 'head_task':
+            out.close()
+            print(f"# file: {outfile} is ready")
+
+    def do_tasks(self):
+
+        # Loop over tasks to execute
+        for task in self.templates['tasks_to_execute_ordered']:
+            ext = self.templates['tasks_extname'][task]
+            print(f"# --- Preparing task: {task} ---- ")
+            if task in self.templates['tasks_per_visit_tracts']:
+                self.task_per_visit_tracts(task, ext=ext)
+            elif task in self.templates['tasks_per_tract_filter']:
+                self.task_per_tract_filter(task, ext=ext)
+            elif task in self.templates['tasks_per_tract_patch']:
+                self.task_per_tract_patch(task, ext=ext)
+            elif task in self.templates['tasks_per_task']:
+                self.task_per_task(task, ext=ext)
+            else:
+                exit(f"ERROR: task: {task} NOT defined on task type")
+
+
+def get_list_str(l):
+    # get the visit in the format we need
+    list_str = "^".join([str(i) for i in l])
+    return list_str
+
+
+def get_chunks(l, n):
+    # For item i in a range that is a length of l,
+    for i in range(0, len(l), n):
+        # Create an index range for l of n items:
+        yield l[i:i+n]
+
+
+def cmdline():
+
+    parser = argparse.ArgumentParser(description="Gen2 Generation script")
+    parser.add_argument("--DMticket", action="store", required=True,
+                        help="The DM-ticket number [i.e.: DM-XXXX]")
+    parser.add_argument("--week", action="store", required=True,
+                        help="The build week [i.e. w_2019_38]")
+    parser.add_argument("--dataset", action="store", default='config/DC2dataset.yaml',
+                        help="yaml file with dataset description")
+    parser.add_argument("--templates", action="store", default='config/DC2templates.yaml',
+                        help="yaml file with template description")
+    parser.add_argument("--rerun_format", action="store", default="{week}/{DMticket}",
+                        help="The format for the rerun path")
+    parser.add_argument("--filepath", action="store", default="rerun_scripts/{DMticket}",
+                        help="The format for the output script files")
+    parser.add_argument("--jobname", action="store", default=None,
+                        help="The jobname")
+    args = parser.parse_args()
+    if not args.jobname:
+        args.weeknumber = args.week[-2:]
+        args.jobname = f"dc2sfm{args.weeknumber}"
+
+    # Set rerun as an arg
+    args.rerun = args.rerun_format.format(**args.__dict__)
+    return args
+
+
+if __name__ == "__main__":
+
+    args = cmdline()
+    gen2 = DC2generator(**args.__dict__)
+    gen2.do_tasks()

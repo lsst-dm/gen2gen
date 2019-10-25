@@ -1,0 +1,264 @@
+# The setup to load up the stack
+setup: |
+  # Setup LSST stack for {week}
+  .  /software/lsstsw/stack/loadLSST.bash
+  setup lsst_distrib -t {week}
+
+templates:
+
+  # Simple bash templates w/slurm hooks
+  makeSkyMap: >-
+    {setup}
+    makeSkyMap.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB
+
+  singleFrameDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
+      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket'
+      --job sfm{tract}{filter} ccd=0..8^10..103 --cores 70 --time 900 --id visit={visit}
+
+  jointcal:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
+      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 filter={filter} tract={tract} visit={visit}
+
+  skyCorrection:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
+      --rerun {rerun}-sfm --batch-type=slurm --mpiexec='-bind-to socket' --time 90
+      --cores 24 --job sky{tract}{filter} --id visit={visit}
+  coaddDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}
+      --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
+      --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
+
+  multiBandDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
+      --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
+      --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str}
+
+  dispatch_verify:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf --user $SQUASH_USER --password $SQUASH_password
+      --ignore-lsstsw /datasets/hsc/repo/rerun/{rerun}/verify/color/tract-{tract}/colorAnalysis_verify_job.json
+
+  # Simple slurm template
+  forcedPhotCcd: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=6000
+    #SBATCH -J frCcd{tract}-{filter}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit}
+
+  coaddAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=900
+    #SBATCH -J coAna{tract}-{filter}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
+    srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB  --rerun {rerun}  --id tract={tract} filter={filter} --no-versions -c doWriteParquetTables=True
+
+  colorAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=1000
+    #SBATCH -J color{tract}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
+    srun colorAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB --rerun {rerun}  --id tract={tract} filter={filter_str} --no-versions -c doWriteParquetTables=True
+
+  compareCoaddAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=900
+    #SBATCH -J comCoadd{tract}-{filter}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
+    srun compareCoaddAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions --id tract={tract} filter={filter}
+
+  matchedVisitMetrics: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH -t 09:00:00
+    #SBATCH -J mat-{tract}-{filter}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/matchedVisitMetrics-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/matchedVisitMetrics-{tract}-{filter}-%j.log
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/RC/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config useJointCal=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  ccd=0..8^10..103 visit={visit}
+
+  visitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=1800
+      #SBATCH -J {mpfile}
+      srun --output /project/hsc_rc2/qaLogs1/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB --no-versions  --tract={tract} --id visit={visitID}"
+
+  compareVisitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=1000
+      #SBATCH -J {mpfile}
+      srun --output /project/hsc_rc2/qaLogs2/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID}"
+
+  matchVisits:
+    head_task: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node=1
+      #SBATCH -t 12:00:00
+      #SBATCH -J matchVisits
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/RC/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
+    multi:
+      "srun matchVisits.py /datasets/hsc/repo/rerun/{rerun} --output /datasets/hsc/repo/rerun/{rerun}  --id tract={tract} filter={filter} --no-versions"
+
+  validateDrp:
+    head_tract: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node=1
+      #SBATCH -t 00:30:00
+      #SBATCH -J validateDrp
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/validateDrp-{tract}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/validateDrp-{tract}-%j.log
+    multi:
+      srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json  --noplot
+    no_loop:
+      srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_*.json --output_file report_performance_{tract}.rst
+
+# Extra specs per task beyond the template
+tasks_specs:
+
+  coaddDriver:
+    9813:
+      time: 600
+    9697:
+      time: 500
+    9615:
+      time: 500
+
+  multiBandDriver:
+    9813:
+      nodes: 7
+      procs: 8
+      time: 45000
+    9697:
+      nodes: 9
+      procs: 10
+      time: 24000
+    9615:
+      nodes: 9
+      procs: 10
+      time: 24000
+
+# Extnames for tasks
+tasks_extname:
+  makeSkyMap: '.sh'
+  singleFrameDriver: '.sh'
+  jointcal: '.sh'
+  skyCorrection: '.sh'
+  coaddDriver: '.sh'
+  multiBandDriver: '.sh'
+  forcedPhotCcd: '.sl'
+  visitAnalysis: '.sl'
+  compareVisitAnalysis: '.sl'
+  coaddAnalysis: '.sl'
+  colorAnalysis: '.sl'
+  compareCoaddAnalysis: '.sl'
+  matchVisits: '.sl'
+  dispatch_verify: '.sh'
+  matchedVisitMetrics: '.sl'
+  validateDrp: '.sl'
+
+tasks_per_tract_filter:
+  - singleFrameDriver
+  - jointcal
+  - skyCorrection
+  - coaddDriver
+  - forcedPhotCcd
+  - visitAnalysis
+  - compareVisitAnalysis
+  - coaddAnalysis
+  - compareCoaddAnalysis
+  - matchVisits
+  - matchedVisitMetrics
+  - validateDrp
+
+tasks_per_tract:
+  - multiBandDriver
+  - colorAnalysis
+  - dispatch_verify
+
+tasks_per_task:
+  - makeSkyMap
+
+tasks_to_execute_slurm_multi:
+  - visitAnalysis
+  - compareVisitAnalysis
+
+tasks_to_execute_slurm_loop:
+  - matchVisits
+
+tasks_to_execute_ordered:
+  - makeSkyMap
+  - singleFrameDriver
+  - jointcal
+  - skyCorrection
+  - coaddDriver
+  - multiBandDriver
+  - forcedPhotCcd
+
+  - visitAnalysis
+  - compareVisitAnalysis
+  - coaddAnalysis
+  - colorAnalysis
+  - compareCoaddAnalysis
+
+  - matchVisits
+
+  - dispatch_verify
+  - matchedVisitMetrics
+  - validateDrp
