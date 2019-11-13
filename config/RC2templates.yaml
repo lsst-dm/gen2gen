@@ -1,15 +1,87 @@
 # The setup to load up the stack
 setup: |
   # Setup LSST stack for {week}
-  .  /software/lsstsw/stack/loadLSST.bash
-  setup lsst_distrib -t {week}
+  .  /software/lsstsw/{stack}/loadLSST.bash
+  setup git_lfs
+  export OMP_NUM_THREADS=1
+  setup lsst_sims -t sims_{week}
+  setup lsst_distrib -k -t {week}
+
+  setup -k -t {week} -v -r {gitpath}/qa_explorer
+  setup -k -t {week} -v -r {gitpath}/meas_mosaic
+  setup -k -t {week} -v -r {gitpath}/pipe_analysis
+
+setup_squash: |
+
+  export DATASET="HSC RC2"
+  export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-11345"
+  export RUN_ID="{DMticket}"
+  export RUN_ID_URL="https://jira.lsstcorp.org/browse/{DMticket}"
+  export VERSION_TAG="{week}"
+  echo "-------------------------------------------------------------------------------------"
+  echo "Hello, "$USER".  This script will setup your SQUASH credentials on the environment   "
+  echo "-------------------------------------------------------------------------------------"
+
+  read -p "Please enter the your SQUASH user [$USER]: " SQUASH_USER
+  SQUASH_USER="${{SQUASH_USER:-$USER}}"
+
+  read -p "Please enter the your SQUASH password: " SQUASH_password
+  SQUASH_password="${{SQUASH_password}}"
+
+  export $SQUASH_USER
+  export $SQUASH_password
+
+
+gitcloner: |
+  # Clone modules
+  CWD=$(pwd)
+  mkdir -p {gitpath}
+
+  cd {gitpath}
+  git clone https://github.com/lsst-dm/qa_explorer
+  git clone https://github.com/lsst-dm/meas_mosaic
+  git clone https://github.com/lsst-dm/pipe_analysis
+
+  cd $CWD
+
+builder: |
+  # Make sure you run this before building:
+  #  scl enable devtoolset-8 bash
+
+  echo "---------------------------------"
+  echo " Make sure you run this before:"
+  echo "  scl enable devtoolset-8 bash"
+  echo "---------------------------------"
+
+  {setup}
+
+  CWD=$(pwd)
+
+  cd {gitpath}/qa_explorer
+  scons
+
+  cd {gitpath}/meas_mosaic
+  scons
+
+  cd {gitpath}/pipe_analysis
+  scons
+  cd $CWD
+
+
+logdir: |
+  /datasets/hsc/repo/rerun/{rerun}/logs/{task}
+
+qalogdir: |
+  /datasets/hsc/repo/rerun/{rerun}/qaLogs/{task}
 
 templates:
 
   # Simple bash templates w/slurm hooks
-  makeSkyMap: >-
+  makeSkyMap: |
+    #!/bin/bash -l
     {setup}
-    makeSkyMap.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB
+
+    makeSkyMap.py /datasets/hsc/repo --rerun {rerun}-sfm --calib /datasets/hsc/repo/CALIB
 
   singleFrameDriver:
     head_task: |
@@ -18,7 +90,7 @@ templates:
     multi: >-
       singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
       --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket'
-      --job sfm{tract}{filter} ccd=0..8^10..103 --cores 70 --time 900 --id visit={visit}
+      --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
 
   jointcal:
     head_task: |
@@ -26,7 +98,7 @@ templates:
       {setup}
     multi: >-
       jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 filter={filter} tract={tract} visit={visit}
+      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract}
 
   skyCorrection:
     head_task: |
@@ -35,7 +107,7 @@ templates:
     multi: >-
       skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
       --rerun {rerun}-sfm --batch-type=slurm --mpiexec='-bind-to socket' --time 90
-      --cores 24 --job sky{tract}{filter} --id visit={visit}
+      --cores 24 --id visit={visit} --job sky{tract}{filter}
   coaddDriver:
     head_task: |
       #!/bin/bash -l
@@ -54,12 +126,24 @@ templates:
       --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
       --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str}
 
-  dispatch_verify:
+  dispatch_verify_colorAnalysis:
     head_task: |
       #!/bin/bash -l
+      {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf --user $SQUASH_USER --password $SQUASH_password
-      --ignore-lsstsw /datasets/hsc/repo/rerun/{rerun}/verify/color/tract-{tract}/colorAnalysis_verify_job.json
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw
+      /datasets/hsc/repo/rerun/{rerun}/verify/color/tract-{tract}/colorAnalysis_verify_job.json
+
+  dispatch_verify_matchedVisit:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw --ignore-blobs
+      /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json
+
 
   # Simple slurm template
   forcedPhotCcd: |
@@ -67,7 +151,7 @@ templates:
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH --time=6000
+    #SBATCH --time=48:00:00
     #SBATCH -J frCcd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
@@ -78,7 +162,7 @@ templates:
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH --time=900
+    #SBATCH --time=15:00:00
     #SBATCH -J coAna{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
@@ -89,7 +173,7 @@ templates:
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH --time=1000
+    #SBATCH --time=16:00:00
     #SBATCH -J color{tract}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
@@ -100,7 +184,7 @@ templates:
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH --time=900
+    #SBATCH --time=15:00:00
     #SBATCH -J comCoadd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
@@ -113,9 +197,9 @@ templates:
     #SBATCH --ntasks-per-node=1
     #SBATCH -t 09:00:00
     #SBATCH -J mat-{tract}-{filter}
-    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/matchedVisitMetrics-{tract}-{filter}-%j.log
-    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/matchedVisitMetrics-{tract}-{filter}-%j.log
-    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/RC/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config useJointCal=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  ccd=0..8^10..103 visit={visit}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config useJointCal=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103
 
   visitAnalysis:
     head_filter: |
@@ -123,9 +207,9 @@ templates:
       #SBATCH -p normal
       #SBATCH -N 1
       #SBATCH --ntasks-per-node={ntasks}
-      #SBATCH --time=1800
-      #SBATCH -J {mpfile}
-      srun --output /project/hsc_rc2/qaLogs1/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+      #SBATCH --time=48:00:00
+      #SBATCH -J SBATCH -J va{tract}-{filter}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB --no-versions  --tract={tract} --id visit={visitID}"
 
@@ -135,9 +219,9 @@ templates:
       #SBATCH -p normal
       #SBATCH -N 1
       #SBATCH --ntasks-per-node={ntasks}
-      #SBATCH --time=1000
-      #SBATCH -J {mpfile}
-      srun --output /project/hsc_rc2/qaLogs2/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+      #SBATCH --time=16:00:00
+      #SBATCH -J cv{tract}-{filter}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID}"
 
@@ -150,7 +234,7 @@ templates:
       #SBATCH -t 12:00:00
       #SBATCH -J matchVisits
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
-      #SBATCH --error=/datasets/hsc/repo/rerun/RC/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
     multi:
       "srun matchVisits.py /datasets/hsc/repo/rerun/{rerun} --output /datasets/hsc/repo/rerun/{rerun}  --id tract={tract} filter={filter} --no-versions"
 
@@ -162,12 +246,34 @@ templates:
       #SBATCH --ntasks-per-node=1
       #SBATCH -t 00:30:00
       #SBATCH -J validateDrp
-      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/validateDrp-{tract}-%j.log
-      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/validateDrp/logs/validateDrp-{tract}-%j.log
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/validateDrp/validateDrp-{tract}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/validateDrp/validateDrp-{tract}-%j.log
     multi:
       srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json  --noplot
     no_loop:
       srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_*.json --output_file report_performance_{tract}.rst
+
+  writeObjectTable:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      writeObjectTable.py  /datasets/hsc/repo --rerun {rerun}:{rerun}_obj --id tract={tract} filter={filter_str} -j 4
+
+  transformObjectCatalog:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      transformObjectCatalog.py /datasets/hsc/repo --rerun {rerun}_obj --id tract={tract} -j 4
+
+  consolidateObjectTable:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      consolidateObjectTable.py /datasets/hsc/repo --rerun {rerun}_obj --id tract={tract} -j 4
+
 
 # Extra specs per task beyond the template
 tasks_specs:
@@ -194,6 +300,27 @@ tasks_specs:
       procs: 10
       time: 24000
 
+# tasks with logdirs
+
+tasks_logdir:
+  - forcedPhotCcd
+  - validateDrp
+
+tasks_qalogdir:
+  - coaddAnalysis
+  - colorAnalysis
+  - compareCoaddAnalysis
+  - matchVisits
+  - compareVisitAnalysis
+  - visitAnalysis
+  - matchedVisitMetrics
+
+tasks_ignore:
+  validateDrp:
+    filters:
+      - NB0921
+    tracts: []
+
 # Extnames for tasks
 tasks_extname:
   makeSkyMap: '.sh'
@@ -209,9 +336,25 @@ tasks_extname:
   colorAnalysis: '.sl'
   compareCoaddAnalysis: '.sl'
   matchVisits: '.sl'
-  dispatch_verify: '.sh'
+  dispatch_verify_colorAnalysis: '.sh'
   matchedVisitMetrics: '.sl'
+  dispatch_verify_matchedVisit: '.sh'
   validateDrp: '.sl'
+  writeObjectTable: '.sh'
+  transformObjectCatalog: '.sh'
+  consolidateObjectTable: '.sh'
+
+# Tasks to bunde
+tasks_to_bundle:
+  - forcedPhotCcd
+  - visitAnalysis
+  - compareVisitAnalysis
+  - coaddAnalysis
+  - colorAnalysis
+  - compareCoaddAnalysis
+  - matchVisits
+  - matchedVisitMetrics
+  - validateDrp
 
 tasks_per_tract_filter:
   - singleFrameDriver
@@ -225,12 +368,17 @@ tasks_per_tract_filter:
   - compareCoaddAnalysis
   - matchVisits
   - matchedVisitMetrics
+  - dispatch_verify_matchedVisit
   - validateDrp
 
 tasks_per_tract:
   - multiBandDriver
   - colorAnalysis
-  - dispatch_verify
+  - dispatch_verify_colorAnalysis
+  - colorAnalysis
+  - writeObjectTable
+  - transformObjectCatalog
+  - consolidateObjectTable
 
 tasks_per_task:
   - makeSkyMap
@@ -259,6 +407,10 @@ tasks_to_execute_ordered:
 
   - matchVisits
 
-  - dispatch_verify
+  - dispatch_verify_colorAnalysis
   - matchedVisitMetrics
+  - dispatch_verify_matchedVisit
   - validateDrp
+  - writeObjectTable
+  - transformObjectCatalog
+  - consolidateObjectTable
