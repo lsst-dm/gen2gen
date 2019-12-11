@@ -30,8 +30,42 @@ class gen2generator:
             os.makedirs(self.filepath)
             print(f"# Created dirname:{self.filepath}")
 
+        # The git clone path
+        self.gitpath = os.path.join(self.filepath, 'git')
+
         # Get the setup string
-        self.setup = self.templates['setup'].format(week=self.config.week)
+        self.setup = self.templates['setup'].format(week=self.config.week,
+                                                    stack=self.config.stack,
+                                                    gitpath=self.gitpath)
+
+        # Get the git cloner sctipt
+        self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
+
+        self.builder = self.templates['builder'].format(gitpath=self.gitpath,
+                                                        setup=self.setup)
+
+    def get_logdir(self, task):
+        self.logdir = self.templates['logdir'].format(rerun=self.rerun, task=task)
+
+    def get_qalogdir(self, task):
+        self.qalogdir = self.templates['qalogdir'].format(rerun=self.rerun, task=task)
+
+    def mk_bundle_sh(self, task):
+
+        shfile = self.task_filename_task(task, ext='.sh')
+        with open(shfile, "w") as sh:
+            sh.write(f"{self.setup}\n")
+
+            # Write the call to mkdir
+            if task in self.templates['tasks_logdir']:
+                self.get_logdir(task)
+                sh.write(f"mkdir -p {self.logdir}")
+            elif task in self.templates['tasks_qalogdir']:
+                self.get_qalogdir(task)
+                sh.write(f"mkdir -p {self.qalogdir}")
+            for outfile in self.outfiles:
+                sh.write(f"sbatch {outfile}\n")
+        print(f"# file: {shfile} is ready")
 
     def load_dataset(self):
         # Load up the manifest
@@ -78,17 +112,23 @@ class gen2generator:
     def task_per_task(self, task, ext=''):
 
         """ Format task per rerun/task only """
+        self.outfiles = []
         kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
         outfile = self.task_filename_task(task, ext=ext)
+        self.outfiles.append(outfile)
         out = open(outfile, "w")
         out.write(self.templates['templates'][task].format(**kw))
         out.close()
         print(f"# file: {outfile} is ready")
 
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
     def task_per_tract(self, task, ext=''):
 
         """ Format a task per tract only """
-
+        self.outfiles = []
         outfile = None
         head_task = False
         head_tract = False
@@ -97,6 +137,7 @@ class gen2generator:
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
             outfile = self.task_filename_task(task, ext=ext)
+            self.outfiles.append(outfile)
             out = open(outfile, "w")
             out.write(self.templates['templates'][task]['head_task'].format(**kw))
             head_task = True
@@ -105,6 +146,7 @@ class gen2generator:
 
             if not head_task and not head_tract:
                 outfile = self.task_filename_tract(task, tract, ext=ext)
+                self.outfiles.append(outfile)
                 out = open(outfile, "w")
 
             filter_str = self.get_filter_str(tract)
@@ -126,27 +168,44 @@ class gen2generator:
             out.close()
             print(f"# file: {outfile} is ready")
 
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
     def task_per_tract_filter(self, task, ext=''):
 
         """ Format a task per tract and filter"""
 
+        self.outfiles = []
         outfile = None
         head_task = False
         head_tract = False
+        filters_ignore = []
+        tracts_ignore = []
         kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+
+        if task in self.templates['tasks_ignore']:
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+            tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
             outfile = self.task_filename_task(task, ext=ext)
+            self.outfiles.append(outfile)
             out = open(outfile, "w")
             out.write(self.templates['templates'][task]['head_task'].format(**kw))
             head_task = True
 
         for tract in self.data['visits'].keys():
 
+            if tract in tracts_ignore:
+                print(f"Skipping {tract}")
+                continue
+
             # Head per tract
             if 'head_tract' in self.templates['templates'][task]:
                 outfile = self.task_filename_tract(task, tract, ext=ext)
+                self.outfiles.append(outfile)
                 out = open(outfile, "w")
                 kw.update({'tract': tract})
                 out.write(self.templates['templates'][task]['head_tract'].format(**kw))
@@ -154,8 +213,13 @@ class gen2generator:
 
             for filter in self.data['visits'][tract].keys():
 
+                if filter in filters_ignore:
+                    print(f"Skipping {filter}")
+                    continue
+
                 if not head_task and not head_tract:
                     outfile = self.task_filename_tract_filter(task, tract, filter, ext=ext)
+                    self.outfiles.append(outfile)
                     out = open(outfile, "w")
 
                 # get the visit in the format we need
@@ -188,10 +252,15 @@ class gen2generator:
             out.close()
             print(f"# file: {outfile} is ready")
 
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
     def task_per_tract_filter_visit_multi(self, task, ext=''):
 
         """ Format a task per tract/filter/visit for multi-progran slurm"""
 
+        self.outfiles = []
         kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
 
         # Loop over tracts
@@ -200,40 +269,77 @@ class gen2generator:
             # Loop over filters
             for filter in self.data['visits'][tract].keys():
 
-                # One file per filter and tract
-                outfile = self.task_filename_tract_filter(task, tract, filter, ext=ext)
-                out = open(outfile, "w")
-                # get the visit in the format we need
-                tractname = self.data['tractname'][tract]
-                visit = self.get_visit_str(tract, filter)
-                ntasks = len(self.data['visits'][tract][filter])
-                mpfile = self.task_filename_tract_filter(task, tract, filter, ext='.mp')
+                # Me make chunks of lenght 24
+                visitID_chunks = get_chunks(self.data['visits'][tract][filter], 24)
 
-                # Create the dict with kwargs
-                kw.update({'visit': visit, 'filter': filter, 'tract': tract,
-                           'ntasks': ntasks, 'tractname': tractname, 'mpfile': mpfile})
-                # Extra info per task
-                if task in self.templates['tasks_specs']:
-                    kw.update(self.templates['tasks_specs'][task][tract])
+                kchunck = 0
+                for chunk in visitID_chunks:
 
-                # The head subtemplate of the slurm
-                out.write(self.templates['templates'][task]['head_filter'].format(**kw))
-                out.close()
-                print(f"# file: {outfile} is ready")
+                    # One file per filter and tract
+                    outfile = self.task_filename_tract_filter(task, tract, filter, ext=f"_{kchunck:02d}{ext}")
+                    self.outfiles.append(outfile)
+                    out = open(outfile, "w")
+                    # get the visit in the format we need
+                    tractname = self.data['tractname'][tract]
+                    visit = self.get_visit_str(tract, filter)
+                    # ntasks = len(self.data['visits'][tract][filter])
+                    ntasks = len(visitID_chunks[kchunck])
+                    mpfile = self.task_filename_tract_filter(task, tract, filter,
+                                                             ext=f"_{kchunck:02d}" + '.mp')
 
-                # Loop over each visit
-                # The multiprog template of the slurm goes on separate file
-                outfile = self.task_filename_tract_filter(task, tract, filter, ext='.mp')
-                out = open(outfile, "w")
-                mpindex = 0
-                for visitID in self.data['visits'][tract][filter]:
-                    kw.update({'mpindex': mpindex, 'visitID': visitID})
-                    out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
-                    mpindex += 1
-                out.close()
-                print(f"# file: {outfile} is ready")
+                    # Create the dict with kwargs
+                    kw.update({'visit': visit, 'filter': filter, 'tract': tract,
+                               'ntasks': ntasks, 'tractname': tractname, 'mpfile': mpfile})
+                    # Extra info per task
+                    if task in self.templates['tasks_specs']:
+                        kw.update(self.templates['tasks_specs'][task][tract])
+
+                    # The head subtemplate of the slurm
+                    out.write(self.templates['templates'][task]['head_filter'].format(**kw))
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+
+                    # Loop over each visit
+                    # The multiprog template of the slurm goes on separate file
+                    outfile = mpfile
+                    out = open(outfile, "w")
+                    mpindex = 0
+                    for visitID in visitID_chunks[kchunck]:
+                        kw.update({'mpindex': mpindex, 'visitID': visitID})
+                        out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+                        mpindex += 1
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+                    kchunck += 1
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def setup_squash(self):
+        sqfile = os.path.join(self.filepath, 'setup_squash.sh')
+        with open(sqfile, "w") as c:
+            sqstr = self.templates['setup_squash'].format(week=self.config.week,
+                                                          DMticket=self.config.DMticket)
+            c.write(sqstr)
+
+    def gitcloner(self):
+        clonerfile = os.path.join(self.filepath, 'cloner.sh')
+        with open(clonerfile, "w") as c:
+            c.write(self.cloner)
+        print(f"# file: {clonerfile} is ready")
+
+    def scons_builder(self):
+        builderfile = os.path.join(self.filepath, 'builder.sh')
+        with open(builderfile, "w") as c:
+            c.write(self.builder)
+        print(f"# file: {builderfile} is ready")
 
     def do_tasks(self):
+
+        self.gitcloner()
+        self.scons_builder()
+        self.setup_squash()
 
         # Loop over tasks to execute
         for task in self.templates['tasks_to_execute_ordered']:
@@ -249,6 +355,10 @@ class gen2generator:
                 self.task_per_task(task, ext=ext)
             else:
                 exit(f"ERROR: task: {task} NOT defined on task type")
+
+
+def get_chunks(mylist, n):
+    return [mylist[i: i+n] for i in range(0, len(mylist), n)]
 
 
 def cmdline():
@@ -268,6 +378,9 @@ def cmdline():
                         help="The format for the rerun path")
     parser.add_argument("--filepath", action="store", default="rerun_scripts/{DMticket}",
                         help="The format for the output script files")
+    parser.add_argument("--stack", action="store", default="stack",
+                        help="The stack to use")
+
     args = parser.parse_args()
     return args
 
