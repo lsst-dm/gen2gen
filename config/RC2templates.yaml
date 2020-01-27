@@ -199,7 +199,7 @@ templates:
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config useJointCal=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103
 
   visitAnalysis:
     head_filter: |
