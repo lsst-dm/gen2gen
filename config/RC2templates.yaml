@@ -222,7 +222,7 @@ templates:
       #SBATCH --time=16:00:00
       #SBATCH -J cv{tract}-{filter}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-%j.log
-      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-%j.err
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.err
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID}"
@@ -301,6 +301,14 @@ tasks_specs:
       nodes: 9
       procs: 10
       time: 24000
+
+  compareVisitAnalysis:
+    9813:
+      procs: 16
+    9697:
+      procs: 16
+    9615:
+      procs: 16
 
 # tasks with logdirs
 

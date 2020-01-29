@@ -256,7 +256,7 @@ class gen2generator:
         if task in self.templates['tasks_to_bundle']:
             self.mk_bundle_sh(task)
 
-    def task_per_tract_filter_visit_multi(self, task, ext=''):
+    def task_per_tract_filter_visit_multi(self, task, ext='', NP=24):
 
         """ Format a task per tract/filter/visit for multi-progran slurm"""
 
@@ -266,11 +266,17 @@ class gen2generator:
         # Loop over tracts
         for tract in self.data['visits'].keys():
 
+            # Get the max number of processor/workers
+            if task in self.templates['tasks_specs'] and 'procs' in self.templates['tasks_specs'][task][tract]:
+                procs = self.templates['tasks_specs'][task][tract]['procs']
+            else:
+                procs = NP
+
             # Loop over filters
             for filter in self.data['visits'][tract].keys():
 
-                # Me make chunks of lenght 24
-                visitID_chunks = get_chunks(self.data['visits'][tract][filter], 24)
+                # Me make chunks of lenght of NP
+                visitID_chunks = get_chunks(self.data['visits'][tract][filter], procs)
 
                 kchunck = 0
                 for chunk in visitID_chunks:
@@ -286,9 +292,8 @@ class gen2generator:
                     ntasks = len(visitID_chunks[kchunck])
                     mpfile = self.task_filename_tract_filter(task, tract, filter,
                                                              ext=f"_{kchunck:02d}" + '.mp')
-
                     # Create the dict with kwargs
-                    kw.update({'visit': visit, 'filter': filter, 'tract': tract,
+                    kw.update({'visit': visit, 'filter': filter, 'tract': tract, 'kchunck': f"{kchunck:02d}",
                                'ntasks': ntasks, 'tractname': tractname, 'mpfile': mpfile})
                     # Extra info per task
                     if task in self.templates['tasks_specs']:
