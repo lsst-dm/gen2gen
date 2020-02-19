@@ -89,23 +89,15 @@ templates:
       {setup}
     multi: >-
       singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket'
+      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' 
       --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
-
-  jointcal:
-    head_task: |
-      #!/bin/bash -l
-      {setup}
-    multi: >-
-      jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract}
 
   skyCorrection:
     head_task: |
       #!/bin/bash -l
       {setup}
     multi: >-
-      skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
+      skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --batch-options='--reservation=pdr2'
       --rerun {rerun}-sfm --batch-type=slurm --mpiexec='-bind-to socket' --time 90
       --cores 24 --id visit={visit} --job sky{tract}{filter}
   coaddDriver:
@@ -113,7 +105,7 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}
+      coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --batch-options='--reservation=pdr2'
       --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
       --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
 
@@ -123,7 +115,7 @@ templates:
       {setup}
     multi: >-
       multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
-      --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
+      --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract} --batch-options='--reservation=pdr2'
       --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str}
 
   dispatch_verify_colorAnalysis:
@@ -131,7 +123,7 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf --batch-options='--reservation=pdr2'
       --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw
       /datasets/hsc/repo/rerun/{rerun}/verify/color/tract-{tract}/colorAnalysis_verify_job.json
 
@@ -140,12 +132,22 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf --batch-options='--reservation=pdr2'
       --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw --ignore-blobs
       /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json
 
 
   # Simple slurm template
+  jointcal: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=48:00:00
+    #SBATCH --reservation=pdr2
+    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
+      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract}
+
   forcedPhotCcd: |
     #!/bin/bash -l
     #SBATCH -p normal
@@ -155,6 +157,7 @@ templates:
     #SBATCH -J frCcd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
+    #SBATCH --reservation=pdr2
     srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit}
 
   coaddAnalysis: |
@@ -166,6 +169,7 @@ templates:
     #SBATCH -J coAna{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --reservation=pdr2
     srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB  --rerun {rerun}  --id tract={tract} filter={filter} --no-versions -c doWriteParquetTables=True
 
   colorAnalysis: |
@@ -177,6 +181,7 @@ templates:
     #SBATCH -J color{tract}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
+    #SBATCH --reservation=pdr2
     srun colorAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB --rerun {rerun}  --id tract={tract} filter={filter_str} --no-versions -c doWriteParquetTables=True
 
   compareCoaddAnalysis: |
@@ -188,6 +193,7 @@ templates:
     #SBATCH -J comCoadd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --reservation=pdr2
     srun compareCoaddAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions --id tract={tract} filter={filter}
 
   matchedVisitMetrics: |
@@ -199,6 +205,7 @@ templates:
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
+    #SBATCH --reservation=pdr2
     srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103
 
   visitAnalysis:
@@ -209,6 +216,7 @@ templates:
       #SBATCH --ntasks-per-node={ntasks}
       #SBATCH --time=48:00:00
       #SBATCH -J SBATCH -J va{tract}-{filter}
+      #SBATCH --reservation=pdr2
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB --no-versions  --tract={tract} --id visit={visitID}"
@@ -223,6 +231,7 @@ templates:
       #SBATCH -J cv{tract}-{filter}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.err
+      #SBATCH --reservation=pdr2
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID}"
@@ -237,6 +246,7 @@ templates:
       #SBATCH -J matchVisits
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
+      #SBATCH --reservation=pdr2
     multi:
       "srun matchVisits.py /datasets/hsc/repo/rerun/{rerun} --output /datasets/hsc/repo/rerun/{rerun}  --id tract={tract} filter={filter} --no-versions"
 
@@ -250,6 +260,7 @@ templates:
       #SBATCH -J validateDrp
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/validateDrp/validateDrp-{tract}-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/validateDrp/validateDrp-{tract}-%j.log
+      #SBATCH --reservation=pdr2
     multi:
       srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json  --noplot
     no_loop:
@@ -356,6 +367,7 @@ tasks_extname:
 
 # Tasks to bunde
 tasks_to_bundle:
+  - jointcal
   - forcedPhotCcd
   - visitAnalysis
   - compareVisitAnalysis
@@ -367,6 +379,7 @@ tasks_to_bundle:
   - validateDrp
 
 tasks_per_tract_filter:
+  - joincat
   - singleFrameDriver
   - jointcal
   - skyCorrection
