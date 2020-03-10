@@ -89,7 +89,7 @@ templates:
       {setup}
     multi: >-
       singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' 
+      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' --batch-options='--reservation=pdr2' 
       --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
 
   skyCorrection:
@@ -115,7 +115,7 @@ templates:
       {setup}
     multi: >-
       multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
-      --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract} --batch-options='--reservation=pdr2'
+      --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract} --batch-options="--reservation=pdr2"
       --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str}
 
   dispatch_verify_colorAnalysis:
@@ -123,7 +123,7 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf --batch-options='--reservation=pdr2'
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
       --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw
       /datasets/hsc/repo/rerun/{rerun}/verify/color/tract-{tract}/colorAnalysis_verify_job.json
 
@@ -132,7 +132,7 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf --batch-options='--reservation=pdr2'
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf 
       --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw --ignore-blobs
       /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json
 
@@ -158,7 +158,7 @@ templates:
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --reservation=pdr2
-    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit}
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --clobber-versions  --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit}
 
   coaddAnalysis: |
     #!/bin/bash -l
