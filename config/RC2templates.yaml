@@ -97,7 +97,7 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --batch-options='--reservation=pdr2'
+      skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --batch-options="--reservation=pdr2"
       --rerun {rerun}-sfm --batch-type=slurm --mpiexec='-bind-to socket' --time 90
       --cores 24 --id visit={visit} --job sky{tract}{filter}
   coaddDriver:
@@ -145,8 +145,7 @@ templates:
     #SBATCH --ntasks-per-node=1
     #SBATCH --time=48:00:00
     #SBATCH --reservation=pdr2
-    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract}
+    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract}
 
   forcedPhotCcd: |
     #!/bin/bash -l
@@ -158,7 +157,7 @@ templates:
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --reservation=pdr2
-    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --clobber-versions  --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit}
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12 --clobber-versions  --id ccd=0..8^10..103 tract={tract} visit={visit}
 
   coaddAnalysis: |
     #!/bin/bash -l
