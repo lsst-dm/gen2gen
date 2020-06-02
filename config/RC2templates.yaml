@@ -1,14 +1,13 @@
 # The setup to load up the stack
 setup: |
   # Setup LSST stack for {week}
-  .  /software/lsstsw/{stack}/loadLSST.bash
+  . /software/lsstsw/stack/loadLSST.bash 
   setup git_lfs
   export OMP_NUM_THREADS=1
   setup lsst_sims -t sims_{week}
   setup lsst_distrib -k -t {week}
 
   setup -k -t {week} -v -r {gitpath}/qa_explorer
-  setup -k -t {week} -v -r {gitpath}/meas_mosaic
   setup -k -t {week} -v -r {gitpath}/pipe_analysis
 
 setup_squash: |
@@ -39,7 +38,6 @@ gitcloner: |
 
   cd {gitpath}
   git clone https://github.com/lsst-dm/qa_explorer
-  git clone https://github.com/lsst-dm/meas_mosaic
   git clone https://github.com/lsst-dm/pipe_analysis
 
   cd $CWD
@@ -58,9 +56,6 @@ builder: |
   CWD=$(pwd)
 
   cd {gitpath}/qa_explorer
-  scons
-
-  cd {gitpath}/meas_mosaic
   scons
 
   cd {gitpath}/pipe_analysis
@@ -89,16 +84,8 @@ templates:
       {setup}
     multi: >-
       singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket'
+      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' 
       --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
-
-  jointcal:
-    head_task: |
-      #!/bin/bash -l
-      {setup}
-    multi: >-
-      jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract}
 
   skyCorrection:
     head_task: |
@@ -140,12 +127,22 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf 
       --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw --ignore-blobs
       /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json
 
 
   # Simple slurm template
+  jointcal: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=48:00:00
+    #SBATCH -J jc{tract}-{filter}
+    #SBATCH --output=jc{tract}-{filter}-%j.log
+    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} --configfile /home/madamow/gen2-reproc/rerun_scripts/DM-25176/jointcal.py --clobber-versions --clobber-config
+
   forcedPhotCcd: |
     #!/bin/bash -l
     #SBATCH -p normal
@@ -155,7 +152,7 @@ templates:
     #SBATCH -J frCcd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
-    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit}
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12 --clobber-versions  --id ccd=0..8^10..103 tract={tract} visit={visit}
 
   coaddAnalysis: |
     #!/bin/bash -l
@@ -260,23 +257,28 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      writeObjectTable.py  /datasets/hsc/repo --rerun {rerun}:{rerun}_obj --id tract={tract} filter={filter_str} -j 4
+      writeObjectTable.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} filter={filter_str} -j 4
 
   transformObjectCatalog:
     head_task: |
       #!/bin/bash -l
       {setup}
     multi: >-
-      transformObjectCatalog.py /datasets/hsc/repo --rerun {rerun}_obj --id tract={tract} -j 4
+      transformObjectCatalog.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
   consolidateObjectTable:
     head_task: |
       #!/bin/bash -l
       {setup}
     multi: >-
-      consolidateObjectTable.py /datasets/hsc/repo --rerun {rerun}_obj --id tract={tract} -j 4
+      consolidateObjectTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
-
+    consolidateSourceTable:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+     consolidateSourceTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 # Extra specs per task beyond the template
 tasks_specs:
 
@@ -290,8 +292,8 @@ tasks_specs:
 
   multiBandDriver:
     9813:
-      nodes: 7
-      procs: 8
+      nodes: 10
+      procs: 6
       time: 45000
     9697:
       nodes: 9
@@ -356,6 +358,7 @@ tasks_extname:
 
 # Tasks to bunde
 tasks_to_bundle:
+  - jointcal
   - forcedPhotCcd
   - visitAnalysis
   - compareVisitAnalysis
@@ -367,6 +370,7 @@ tasks_to_bundle:
   - validateDrp
 
 tasks_per_tract_filter:
+  - joincat
   - singleFrameDriver
   - jointcal
   - skyCorrection
@@ -389,7 +393,8 @@ tasks_per_tract:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
-
+tasks_per_visit:
+  -consolidateSourceTable
 tasks_per_task:
   - makeSkyMap
 
