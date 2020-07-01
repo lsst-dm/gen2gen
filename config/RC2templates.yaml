@@ -87,6 +87,16 @@ templates:
       --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' 
       --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
 
+  fakesDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      processCcdWithFakesDriver.py /datasets/hsc/repo
+      --rerun RC/v20_0_0_rc1/DM-25349:private/madamow/cosmosFakes --batch-type slurm --mpiexec='-bind-to socket'
+      --job fakes{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
+      filter={filter} tract={tract} -c doMakeSourceTable=True -c doSaveWideSourceTable=True -c processCcdWithFakes.useUpdatedCalibs=True
+
   skyCorrection:
     head_task: |
       #!/bin/bash -l
@@ -208,7 +218,7 @@ templates:
       #SBATCH -J SBATCH -J va{tract}-{filter}
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB --no-versions  --tract={tract} --id visit={visitID}"
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB -c externalPhotoCalibName=fgcm --no-versions  --tract={tract} --id visit={visitID}"
 
   compareVisitAnalysis:
     head_filter: |
@@ -250,7 +260,7 @@ templates:
     multi:
       srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json  --noplot
     no_loop:
-      srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_*.json --output_file report_performance_{tract}.rst
+      srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_HSC*.json --output_file report_performance_{tract}.rst
 
   writeObjectTable:
     head_task: |
@@ -273,12 +283,6 @@ templates:
     multi: >-
       consolidateObjectTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
-    consolidateSourceTable:
-    head_task: |
-      #!/bin/bash -l
-      {setup}
-    multi: >-
-     consolidateSourceTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 # Extra specs per task beyond the template
 tasks_specs:
 
@@ -332,12 +336,19 @@ tasks_ignore:
     filters:
       - NB0921
     tracts: []
+  fakesDriver:
+    filters: []
+    tracts:
+      - 9697
+      - 9615
+     
 
 # Extnames for tasks
 tasks_extname:
   makeSkyMap: '.sh'
   singleFrameDriver: '.sh'
   jointcal: '.sh'
+  fakesDriver: '.sh'
   skyCorrection: '.sh'
   coaddDriver: '.sh'
   multiBandDriver: '.sh'
@@ -372,6 +383,7 @@ tasks_to_bundle:
 tasks_per_tract_filter:
   - joincat
   - singleFrameDriver
+  - fakesDriver
   - jointcal
   - skyCorrection
   - coaddDriver
@@ -393,8 +405,6 @@ tasks_per_tract:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
-tasks_per_visit:
-  -consolidateSourceTable
 tasks_per_task:
   - makeSkyMap
 
@@ -410,12 +420,14 @@ tasks_to_execute_ordered:
   - singleFrameDriver
   - jointcal
   - skyCorrection
+
+  - visitAnalysis
+  - compareVisitAnalysis
+
   - coaddDriver
   - multiBandDriver
   - forcedPhotCcd
 
-  - visitAnalysis
-  - compareVisitAnalysis
   - coaddAnalysis
   - colorAnalysis
   - compareCoaddAnalysis
@@ -429,3 +441,4 @@ tasks_to_execute_ordered:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
+  - fakesDriver
