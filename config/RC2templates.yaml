@@ -232,7 +232,7 @@ templates:
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.err
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID}"
+      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=jointcal"
 
   matchVisits:
     head_task: |
