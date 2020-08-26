@@ -1,0 +1,70 @@
+
+# The setup to load up the stack
+setup: |
+  # Setup LSST stack for {week}
+  .  /software/lsstsw/stack/loadLSST.bash
+  setup lsst_distrib -t {week}
+
+
+templates:
+
+  singleFrameDriver: >
+    singleFrameDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --batch-type slurm
+    --mpiexec='-bind-to socket' --job {jobname} --cores 24 --time 900  --id visit={visit};
+
+  makeSkyMap: >
+    makeSkyMap.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --no-versions >& log_makeSkyMap_{weeknumber}
+
+  coaddDriver:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      coaddDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun}/coadd -c makeCoaddTempExp.doApplyUberCal=False
+      -c assembleCoadd.doApplyUberCal=False --batch-type=slurm --mpiexec='-bind-to socket' --time 600 --cores 24
+      --job coadd{filter}{tract} --id filter={filter} tract={tract} --selectId visit={visit};
+
+  multiBandDriver:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      multiBandDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/coadd:{rerun}/multi --batch-type=slurm --mpiexec='-bind-to socket'
+      --job mt{tract}-{patch} --core 1 --time 45000 -c measureCoaddSources.propagateFlags.ccdName='detector'
+      --id filter={filter_str} tract={tract} patch={patch_alt};
+
+  matchedVisitMetrics: 
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      matchedVisitMetrics.py /datasets/DC2/repoRun2.2i --rerun {rerun} --output  /datasets/DC2/repoRun2.2i/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config  instrumentName='HSC' datasetName='HSC-DC2' --id filter={filter} tract={tract} visit={visit}; 
+    
+
+# Extra specs per task beyond the template
+tasks_specs:
+  empty
+
+# Extnames for tasks
+tasks_extname:
+  makeSkyMap: '.sh'
+  singleFrameDriver: '.sh'
+  coaddDriver: '.sh'
+  multiBandDriver: '.sh'
+  matchedVisitMetrics: '.sh'
+
+tasks_per_visit_tracts:
+  - singleFrameDriver
+
+tasks_per_tract_filter:
+  - coaddDriver
+  - matchedVisitMetrics
+tasks_per_tract_patch:
+  - multiBandDriver
+
+tasks_per_task:
+  - makeSkyMap
+
+tasks_to_execute_ordered:
+  - singleFrameDriver
+  - makeSkyMap
+  - coaddDriver
+  - multiBandDriver
+  - matchedVisitMetrics
