@@ -1,0 +1,227 @@
+# The setup to load up the stack
+setup: |
+  # Setup LSST stack for {week}
+  . /software/lsstsw/stack/loadLSST.bash 
+  setup git_lfs
+  export OMP_NUM_THREADS=1
+  setup lsst_sims 
+  setup lsst_distrib -k -t {week}
+
+  setup  -v -r {gitpath}/qa_explorer
+  setup  -v -r {gitpath}/pipe_analysis
+
+multiBandDriver_config: |
+  #config for mutliBandDriver
+  config.measureCoaddSources.propagateFlags.flags={'calib_psf_candidate': 0.2, 'calib_psf_used': 0.2, 'calib_psf_reserved': 0.2, 'calib_photometry_used': 0.2, 'calib_photometry_reserved': 0.2}
+  config.hasFakes=True
+  config.measureCoaddSources.measurement.plugins['base_PixelFlags'].masksFpAnywhere.append('FAKE')
+  config.measureCoaddSources.measurement.plugins['base_PixelFlags'].masksFpCenter.append('FAKE')
+  config.forcedPhotCoadd.measurement.plugins['base_PixelFlags'].masksFpAnywhere.append('FAKE')
+  config.forcedPhotCoadd.measurement.plugins['base_PixelFlags'].masksFpCenter.append('FAKE')
+  config.deblendCoaddSources.hasFakes=True
+  config.measureCoaddSources.hasFakes=True
+  config.forcedPhotCoadd.hasFakes=True
+
+gitcloner: |
+  # Clone modules
+  CWD=$(pwd)
+  mkdir -p {gitpath}
+
+  cd {gitpath}
+  git clone https://github.com/lsst-dm/qa_explorer
+  git clone https://github.com/lsst-dm/pipe_analysis
+
+  cd $CWD
+
+builder: |
+  # Make sure you run this before building:
+  #  scl enable devtoolset-8 bash
+
+  echo "---------------------------------"
+  echo " Make sure you run this before:"
+  echo "  scl enable devtoolset-8 bash"
+  echo "---------------------------------"
+
+  {setup}
+
+  CWD=$(pwd)
+
+  cd {gitpath}/qa_explorer
+  scons
+
+  cd {gitpath}/pipe_analysis
+  scons
+  cd $CWD
+
+
+logdir: |
+  /datasets/hsc/repo/rerun/{rerun}/logs/{task}
+
+qalogdir: |
+  /datasets/hsc/repo/rerun/{rerun}/qaLogs/{task}
+
+templates:
+
+  # Simple bash templates w/slurm hooks
+
+  fakesDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      processCcdWithFakesDriver.py /datasets/hsc/repo
+      --rerun {rerun} --batch-type slurm --mpiexec='-bind-to socket'
+      --job fakes{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
+      filter={filter} tract={tract} -c doMakeSourceTable=True -c doSaveWideSourceTable=True -c processCcdWithFakes.useUpdatedCalibs=True
+
+  coaddDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}-coadd
+      --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
+      --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
+      --config hasFakes=True detectCoaddSources.hasFakes=True makeCoaddTempExp.hasFakes=True assembleCoadd.hasFakes=True calexpType="fakes_calexp"
+
+  multiBandDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
+      --rerun {rerun}-coadd:{rerun}-multiBand --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
+      --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str} -C multiBandDriver_config
+
+
+  # Simple slurm template
+  jointcal: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=48:00:00
+    #SBATCH -J jointcal{tract}-{filter}
+    #SBATCH --output=jointcal{tract}-{filter}-%j.log
+    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun2}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} 
+
+
+  visitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=48:00:00
+      #SBATCH -J SBATCH -J va{tract}-{filter}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB -c externalPhotoCalibName=fgcm --no-versions  --tract={tract} --id visit={visitID}"
+
+
+# Extra specs per task beyond the template
+tasks_specs:
+
+  coaddDriver:
+    9813:
+      time: 600
+    9697:
+      time: 500
+    9615:
+      time: 500
+
+  multiBandDriver:
+    9813:
+      nodes: 10
+      procs: 6
+      time: 45000
+    9697:
+      nodes: 9
+      procs: 10
+      time: 24000
+    9615:
+      nodes: 9
+      procs: 10
+      time: 24000
+
+
+# tasks with logdirs
+
+
+tasks_qalogdir:
+  - visitAnalysis
+
+tasks_ignore:
+  validateDrp:
+    filters:
+      - NB0921
+    tracts: []
+  fakesDriver:
+    filters:
+      - NB0921 
+    tracts:
+      - 9697
+      - 9615
+  jointcal:
+    filters: 
+      - NB0921
+    tracts:
+      - 9697
+      - 9615
+  coaddDriver:
+    filters: 
+      - NB0921
+    tracts:
+      - 9697
+      - 9615
+  multiBandDriver:
+    filters: [] 
+    tracts:
+      - 9697
+      - 9615
+  visitAnalysis:
+    filters: 
+      - NB0921
+    tracts:
+      - 9697
+      - 9615  
+     
+
+# Extnames for tasks
+tasks_extname:
+  jointcal: '.sh'
+  fakesDriver: '.sh'
+  coaddDriver: '.sh'
+  multiBandDriver: '.sh'
+  visitAnalysis: '.sl'
+
+# Tasks to bunde
+tasks_to_bundle:
+  - jointcal
+  - visitAnalysis
+
+tasks_logdir: []
+
+tasks_per_tract_filter:
+  - singleFrameDriver
+  - fakesDriver
+  - jointcal
+  - coaddDriver
+  - visitAnalysis
+
+tasks_per_tract:
+  - multiBandDriver
+
+tasks_per_task:
+  - makeSkyMap
+
+tasks_to_execute_slurm_multi:
+  - visitAnalysis
+
+tasks_to_execute_ordered:
+  - jointcal
+  - fakesDriver
+  - visitAnalysis
+  - coaddDriver
+  - multiBandDriver
+
