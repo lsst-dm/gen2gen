@@ -4,11 +4,11 @@ setup: |
   . /software/lsstsw/stack/loadLSST.bash 
   setup git_lfs
   export OMP_NUM_THREADS=1
-  setup lsst_sims -t sims_{week}
+  setup lsst_sims 
   setup lsst_distrib -k -t {week}
 
-  setup -k -t {week} -v -r {gitpath}/qa_explorer
-  setup -k -t {week} -v -r {gitpath}/pipe_analysis
+  setup  -v -r {gitpath}/qa_explorer
+  setup  -v -r {gitpath}/pipe_analysis
 
 setup_squash: |
 
@@ -87,6 +87,16 @@ templates:
       --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' 
       --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
 
+  fakesDriver:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      processCcdWithFakesDriver.py /datasets/hsc/repo
+      --rerun RC/v20_0_0_rc1/DM-25349:private/madamow/cosmosFakes --batch-type slurm --mpiexec='-bind-to socket'
+      --job fakes{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
+      filter={filter} tract={tract} -c doMakeSourceTable=True -c doSaveWideSourceTable=True -c processCcdWithFakes.useUpdatedCalibs=True
+
   skyCorrection:
     head_task: |
       #!/bin/bash -l
@@ -103,6 +113,7 @@ templates:
       coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}
       --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
       --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
+      --config makeCoaddTempExp.externalPhotoCalibName=fgcm assembleCoadd.externalPhotoCalibName=fgcm assembleCoadd.assembleStaticSkyModel.externalPhotoCalibName=fgcm 
 
   multiBandDriver:
     head_task: |
@@ -139,9 +150,9 @@ templates:
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
     #SBATCH --time=48:00:00
-    #SBATCH -J jc{tract}-{filter}
-    #SBATCH --output=jc{tract}-{filter}-%j.log
-    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} --configfile /home/madamow/gen2-reproc/rerun_scripts/DM-25176/jointcal.py --clobber-versions --clobber-config
+    #SBATCH -J jointcal{tract}-{filter}
+    #SBATCH --output=jointcal{tract}-{filter}-%j.log
+    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} -c doPhotometry=False
 
   forcedPhotCcd: |
     #!/bin/bash -l
@@ -152,7 +163,7 @@ templates:
     #SBATCH -J frCcd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
-    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12 --clobber-versions  --id ccd=0..8^10..103 tract={tract} visit={visit}
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12 --clobber-versions  --id ccd=0..8^10..103 tract={tract} visit={visit} -c externalPhotoCalibName=fgcm
 
   coaddAnalysis: |
     #!/bin/bash -l
@@ -196,7 +207,7 @@ templates:
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm --clobber-config
 
   visitAnalysis:
     head_filter: |
@@ -208,7 +219,7 @@ templates:
       #SBATCH -J SBATCH -J va{tract}-{filter}
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB --no-versions  --tract={tract} --id visit={visitID}"
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB -c externalPhotoCalibName=fgcm --no-versions  --tract={tract} --id visit={visitID}"
 
   compareVisitAnalysis:
     head_filter: |
@@ -222,7 +233,7 @@ templates:
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.err
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID}"
+      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
 
   matchVisits:
     head_task: |
@@ -250,7 +261,7 @@ templates:
     multi:
       srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json  --noplot
     no_loop:
-      srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_*.json --output_file report_performance_{tract}.rst
+      srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_HSC*.json --output_file report_performance_{tract}.rst
 
   writeObjectTable:
     head_task: |
@@ -273,12 +284,6 @@ templates:
     multi: >-
       consolidateObjectTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
-    consolidateSourceTable:
-    head_task: |
-      #!/bin/bash -l
-      {setup}
-    multi: >-
-     consolidateSourceTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 # Extra specs per task beyond the template
 tasks_specs:
 
@@ -332,12 +337,19 @@ tasks_ignore:
     filters:
       - NB0921
     tracts: []
+  fakesDriver:
+    filters: []
+    tracts:
+      - 9697
+      - 9615
+     
 
 # Extnames for tasks
 tasks_extname:
   makeSkyMap: '.sh'
   singleFrameDriver: '.sh'
   jointcal: '.sh'
+  fakesDriver: '.sh'
   skyCorrection: '.sh'
   coaddDriver: '.sh'
   multiBandDriver: '.sh'
@@ -372,6 +384,7 @@ tasks_to_bundle:
 tasks_per_tract_filter:
   - joincat
   - singleFrameDriver
+  - fakesDriver
   - jointcal
   - skyCorrection
   - coaddDriver
@@ -393,8 +406,6 @@ tasks_per_tract:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
-tasks_per_visit:
-  -consolidateSourceTable
 tasks_per_task:
   - makeSkyMap
 
@@ -410,12 +421,14 @@ tasks_to_execute_ordered:
   - singleFrameDriver
   - jointcal
   - skyCorrection
+
+  - visitAnalysis
+  - compareVisitAnalysis
+
   - coaddDriver
   - multiBandDriver
   - forcedPhotCcd
 
-  - visitAnalysis
-  - compareVisitAnalysis
   - coaddAnalysis
   - colorAnalysis
   - compareCoaddAnalysis
@@ -429,3 +442,4 @@ tasks_to_execute_ordered:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
+  - fakesDriver
