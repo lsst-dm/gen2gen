@@ -88,10 +88,23 @@ class gen2generator:
         # get the visit in the format we need
         visit_str = "^".join([str(i) for i in self.data['visits'][tract][filter]])
         return visit_str
+ 
+    def get_all_visits_per_tract_str(self, tract):
+        # get all visits per tract in right format
+        all_visits = []
+        for f in self.data['visits'][tract]:
+            all_visits.append(self.data['visits'][tract][f]) 
+        all_visits = [item for sublist in all_visits for item in sublist]
+        filter_str = "^".join([str(i) for i in all_visits])
+        return filter_str        
 
-    def get_filter_str(self, tract):
+    def get_filter_str(self, tract, task):
         # get the filter in the format we need
-        filter_str = "^".join([str(i) for i in self.data['visits'][tract]])
+        filters = self.data['visits'][tract]
+        if task in self.templates['tasks_ignore']:
+            filters_ignore = self.templates['tasks_ignore'][task]['filters'] 
+        filters_in = list(filter(lambda a: a not in filters_ignore, filters))       
+        filter_str = "^".join([str(i) for i in filters_in])
         return filter_str
 
     def task_filename_tract_filter(self, task, tract, filter, ext=''):
@@ -125,14 +138,14 @@ class gen2generator:
         if task in self.templates['tasks_to_bundle']:
             self.mk_bundle_sh(task)
 
-    def task_per_tract(self, task, ext=''):
-
+    def task_list_all_visits(self, task, ext=''):
         """ Format a task per tract only """
         self.outfiles = []
         outfile = None
         head_task = False
         head_tract = False
         kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+ 
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
@@ -141,19 +154,63 @@ class gen2generator:
             out = open(outfile, "w")
             out.write(self.templates['templates'][task]['head_task'].format(**kw))
             head_task = True
-
+        
         for tract in self.data['visits'].keys():
+            visits = self.get_all_visits_per_tract_str(tract)
+            kw.update({'visit': visits, 'tract': tract, 'tractname':self.data['tractname'][tract]})
+            
+            if not head_task and not head_tract:
+                outfile = self.task_filename_tract(task, tract, ext=ext)
+                self.outfiles.append(outfile)
+                out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+            # close file accordingly by tract
+
+        # close file accordingly by task
+        if head_task:
+            out.close()
+            print(f"# file: {outfile} is ready")
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def task_per_tract(self, task, ext=''):
+
+        """ Format a task per tract only """
+        self.outfiles = []
+        outfile = None
+        head_task = False
+        head_tract = False
+        filters_ignore = []
+        tracts_ignore = []
+        kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+
+        if task in self.templates['tasks_ignore']:
+            tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+
+        # Head per rerun
+        if 'head_task' in self.templates['templates'][task]:
+            outfile = self.task_filename_task(task, ext=ext)
+            self.outfiles.append(outfile)
+            out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['head_task'].format(**kw))
+            head_task = True
+        for tract in self.data['visits'].keys():
+            if tract in tracts_ignore:
+                print(f"Skipping {tract}")
+                continue
 
             if not head_task and not head_tract:
                 outfile = self.task_filename_tract(task, tract, ext=ext)
                 self.outfiles.append(outfile)
                 out = open(outfile, "w")
 
-            filter_str = self.get_filter_str(tract)
+            filter_str = self.get_filter_str(tract, task)
             kw = {'rerun': self.rerun, 'filter_str': filter_str, 'tract': tract}
             if task in self.templates['tasks_specs']:
                 kw.update(self.templates['tasks_specs'][task][tract])
-
             if 'multi' in self.templates['templates'][task]:
                 out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
             else:
@@ -259,13 +316,21 @@ class gen2generator:
     def task_per_tract_filter_visit_multi(self, task, ext='', NP=24):
 
         """ Format a task per tract/filter/visit for multi-progran slurm"""
-
+        filters_ignore = []
+        tracts_ignore = []
         self.outfiles = []
         kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
-
+        
+        if task in self.templates['tasks_ignore']:
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+            tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
+        
         # Loop over tracts
         for tract in self.data['visits'].keys():
-
+            if tract in tracts_ignore:
+                print(f"Skipping {tract}")
+                continue
+            
             # Get the max number of processor/workers
             if task in self.templates['tasks_specs'] and 'procs' in self.templates['tasks_specs'][task][tract]:
                 procs = self.templates['tasks_specs'][task][tract]['procs']
@@ -274,7 +339,9 @@ class gen2generator:
 
             # Loop over filters
             for filter in self.data['visits'][tract].keys():
-
+                if filter in filters_ignore:
+                    print(f"Skipping {filter}")
+                    continue
                 # Me make chunks of lenght of NP
                 visitID_chunks = get_chunks(self.data['visits'][tract][filter], procs)
 
@@ -328,6 +395,13 @@ class gen2generator:
                                                           DMticket=self.config.DMticket)
             c.write(sqstr)
 
+    def multiBandDriver_config(self):
+        sqfile = os.path.join(self.filepath, 'multiBandDriver_config.py')
+        with open(sqfile, "w") as c:
+            sqstr = self.templates['multiBandDriver_config'].format(week=self.config.week,
+                                                          DMticket=self.config.DMticket)
+            c.write(sqstr)
+
     def gitcloner(self):
         clonerfile = os.path.join(self.filepath, 'cloner.sh')
         with open(clonerfile, "w") as c:
@@ -344,7 +418,16 @@ class gen2generator:
 
         self.gitcloner()
         self.scons_builder()
-        self.setup_squash()
+        try:
+            self.setup_squash()
+        except KeyError:
+            pass
+
+        try:
+            self.multiBandDriver_config()
+        except KeyError:
+            pass
+ 
 
         # Loop over tasks to execute
         for task in self.templates['tasks_to_execute_ordered']:
@@ -358,6 +441,8 @@ class gen2generator:
                 self.task_per_tract(task, ext=ext)
             elif task in self.templates['tasks_per_task']:
                 self.task_per_task(task, ext=ext)
+            elif task in self.templates['task_list_all_visits']:
+                self.task_list_all_visits(task, ext=ext)
             else:
                 exit(f"ERROR: task: {task} NOT defined on task type")
 
