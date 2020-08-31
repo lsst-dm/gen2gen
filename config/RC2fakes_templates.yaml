@@ -81,7 +81,7 @@ templates:
     multi: >-
       coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}-coadd
       --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
-      --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
+      --cores 24  --id tract={tract}  filter={filter} --selectId tract={tract} ccd=0..8^10..103 visit={visit}
       --config hasFakes=True detectCoaddSources.hasFakes=True makeCoaddTempExp.hasFakes=True assembleCoadd.hasFakes=True calexpType="fakes_calexp"
 
   multiBandDriver:
@@ -91,7 +91,7 @@ templates:
     multi: >-
       multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
       --rerun {rerun}-coadd:{rerun}-multiBand --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
-      --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str} -C multiBandDriver_config
+      --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str} -C multiBandDriver_config.py
 
 
   # Simple slurm template
@@ -114,9 +114,9 @@ templates:
       #SBATCH --ntasks-per-node={ntasks}
       #SBATCH --time=48:00:00
       #SBATCH -J SBATCH -J va{tract}-{filter}
-      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+      srun --output /datasets/hsc/repo/rerun/{rerun}-va/logs/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB -c externalPhotoCalibName=fgcm --no-versions  --tract={tract} --id visit={visitID}"
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun}:{rerun}-va --calib /datasets/hsc/repo/CALIB  --tract={tract} --id visit={visitID}"
 
 
 # Extra specs per task beyond the template
@@ -175,7 +175,7 @@ tasks_ignore:
       - 9697
       - 9615
   multiBandDriver:
-    filters: [] 
+    filters: [NB0921] 
     tracts:
       - 9697
       - 9615

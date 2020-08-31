@@ -284,6 +284,13 @@ templates:
     multi: >-
       consolidateObjectTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
+  consolidateSourceTable:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      consolidateSourceTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm --id visit={visit}  &> consolidateSource_{tractname}.log &
+
 # Extra specs per task beyond the template
 tasks_specs:
 
@@ -297,7 +304,7 @@ tasks_specs:
 
   multiBandDriver:
     9813:
-      nodes: 10
+      nodes: 5
       procs: 6
       time: 45000
     9697:
@@ -367,6 +374,7 @@ tasks_extname:
   writeObjectTable: '.sh'
   transformObjectCatalog: '.sh'
   consolidateObjectTable: '.sh'
+  consolidateSourceTable: '.sh'
 
 # Tasks to bunde
 tasks_to_bundle:
@@ -406,6 +414,7 @@ tasks_per_tract:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
+
 tasks_per_task:
   - makeSkyMap
 
@@ -415,6 +424,9 @@ tasks_to_execute_slurm_multi:
 
 tasks_to_execute_slurm_loop:
   - matchVisits
+
+task_list_all_visits:
+  -consolidateSourceTable
 
 tasks_to_execute_ordered:
   - makeSkyMap
@@ -442,4 +454,5 @@ tasks_to_execute_ordered:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
-  - fakesDriver
+  - consolidateSourceTable
+  #- fakesDriver
