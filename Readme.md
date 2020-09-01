@@ -29,4 +29,6 @@ gen2-DC2-generator --DMticket DM-1234 --week w_2019_38 --filepath rerun_scripts/
 ```
 
 Current DC2 dataset is DC2.2i. To change the dataset to DC2.2i:
+```
 gen2-DC2-generator --DMticket DM-1234 --week w_2019_38 --filepath rerun_scripts/{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
+```
