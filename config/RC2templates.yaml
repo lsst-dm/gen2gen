@@ -4,11 +4,11 @@ setup: |
   . /software/lsstsw/stack/loadLSST.bash 
   setup git_lfs
   export OMP_NUM_THREADS=1
-  setup lsst_sims 
+  setup lsst_sims -t sims_{week} 
   setup lsst_distrib -k -t {week}
 
-  setup  -v -r {gitpath}/qa_explorer
-  setup  -v -r {gitpath}/pipe_analysis
+  setup -k -t {week} -v -r {gitpath}/qa_explorer
+  setup -k -t {week} -v -r {gitpath}/pipe_analysis
 
 setup_squash: |
 
