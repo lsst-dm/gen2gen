@@ -163,7 +163,7 @@ templates:
     #SBATCH -J frCcd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
-    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12 --clobber-versions  --id ccd=0..8^10..103 tract={tract} visit={visit} -c externalPhotoCalibName=fgcm
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit} -c externalPhotoCalibName=fgcm
 
   coaddAnalysis: |
     #!/bin/bash -l
@@ -207,7 +207,7 @@ templates:
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm --clobber-config
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm 
 
   visitAnalysis:
     head_filter: |
