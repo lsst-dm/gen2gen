@@ -101,6 +101,7 @@ class gen2generator:
     def get_filter_str(self, tract, task):
         # get the filter in the format we need
         filters = self.data['visits'][tract]
+        filters_ignore = []
         if task in self.templates['tasks_ignore']:
             filters_ignore = self.templates['tasks_ignore'][task]['filters'] 
         filters_in = list(filter(lambda a: a not in filters_ignore, filters))       
