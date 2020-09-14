@@ -13,22 +13,22 @@ With that caveat...
 
 To run on RC2:
 ```
-gen2-RC2-generator --DMticket DM-XXXX --week w_2019_38 --rerun2 RC/w_2019_34/DM-YYYY --filepath rerun_scripts/{DMticket}
+gen2-RC2-generator --DMticket DM-XXXX --week w_2019_38 --rerun2 RC/w_2019_34/DM-YYYY --filepath /full/path/to/rerun_scripts/{DMticket}
 ```
 
 To run RC2 with fakes:
 (for fakes rerun2 is used as a rerun to fork from)
 ```
-gen2-RC2-generator --DMticket DM-XXXX --week w_2020_34 --rerun2 RC/w_2020_34/DM-YYYYY --filepath rerun_scripts/{DMticket} --templates config/RC2fakes_templates.yaml --rerun_format RCfakes/{week}/{DMticket}
+gen2-RC2-generator --DMticket DM-XXXX --week w_2020_34 --rerun2 RC/w_2020_34/DM-YYYYY --filepath /full/path/to/rerun_scripts/{DMticket} --templates config/RC2fakes_templates.yaml --rerun_format RCfakes/{week}/{DMticket}
 ```
 
 To run on DC2:
 
 ```
-gen2-DC2-generator --DMticket DM-1234 --week w_2019_38 --filepath rerun_scripts/{DMticket}
+gen2-DC2-generator --DMticket DM-1234 --week w_2019_38 --filepath /full/path/to/rerun_scripts/{DMticket}
 ```
 
 Current DC2 dataset is DC2.2i. To change the dataset to DC2.2i:
 ```
-gen2-DC2-generator --DMticket DM-1234 --week w_2019_38 --filepath rerun_scripts/{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
+gen2-DC2-generator --DMticket DM-1234 --week w_2019_38 --filepath /full/path/to/rerun_scripts/{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
 ```
