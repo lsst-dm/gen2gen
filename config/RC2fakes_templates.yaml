@@ -58,7 +58,7 @@ logdir: |
   /datasets/hsc/repo/rerun/{rerun}/logs/{task}
 
 qalogdir: |
-  /datasets/hsc/repo/rerun/{rerun}/qaLogs/{task}
+  /datasets/hsc/repo/rerun/{rerun}-va/logs/
 
 templates:
 
