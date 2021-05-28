@@ -1,7 +1,12 @@
 # All this should be performed in a screen session (e.g. screen -S RC2)
+# on  lsst-condorprod-sub01 (which you can log into through lsst-login
 # You can log out of a screen session with ctrl-a-d and then log back in with screen -r RC2
 
 # Set week and DM. The DM is detrermined when you make a "RC2 reprocessing with $WEEK" JIRA Ticket
+# Assign to self
+# Team- Data Facility
+# Watchers- yusra, emorganson
+# Epic Link- LOE: Periodic reprocessing of test data sets
 WEEK=w_2021_18
 DM=29946
 # GOODWEEK and GOODDM are the WEEK and DM from the last successful run 
@@ -15,7 +20,7 @@ setup lsst_distrib $WEEK
 
 # Seeting up the gen2 RC2 scripts
 mkdir -p /home/$USER/HSC/RC2/rerun_scripts/
-./gen2-RC2-generator --DMticket DM-$DM --week $WEEK --rerun2 RC/${GOODWEEK}/DM-${GOODDM} --filepath /home/emorgan2/HSC/RC2/rerun_scripts/{DMticket}
+./gen2-RC2-generator --DMticket DM-$DM --week $WEEK --rerun2 RC/${GOODWEEK}/DM-${GOODDM} --filepath /home/$USER/HSC/RC2/rerun_scripts/{DMticket}
 cd /home/$USER/HSC/RC2/rerun_scripts/DM-$DM
 source cloner.sh
 scl enable devtoolset-8 bash
@@ -24,7 +29,6 @@ scl enable devtoolset-8 bash
 WEEK=w_2021_18
 source /software/lsstsw/stack/loadLSST.bash
 setup lsst_distrib $WEEK
-setup lsst_sims -k 
 
 source builder.sh
 
@@ -41,7 +45,7 @@ cd $CWD
 
 # Squash is used to send in some data in steps
 # dispatch_verify_colorAnalysis dispatch_verify_coaddAnalysis dispatch_verify_matchedVisit
-# You need to get a squash account directions here:
+# You need to get a squash account (directions here):
 # https://confluence.lsstcorp.org/display/DM/RC2+Reprocessing+recipe in point 6
 #
 SQUASH_USER=$USER
@@ -67,17 +71,24 @@ source all_steps.sh
 source 05_visitAnalysis.sh
 #etc. Step 5-10 will take ~5 days
 
-# You need to regulaarly check logs. There's no good way to do this. Many script write to slurm logs so
+# The remaining steps (post forced photometry) take ~1 day but require more log reading
+
+# You need to regularly check logs. There's no good way to do this. Many scripts write to slurm logs so
 # tail sfm* 
-# shows you the last few line of all single frame processing jobs and will usually show you if they are okay.
+# shows you the last few lines of all single frame processing jobs and will usually show you if they are okay.
 # similarly for tail coadd*, tail sky*, tail jointcal*, tail mt*
 # The names and locations of logs are listed in either the .sh script or its associated .sl or .mp files
+
+# I there are errors in the logs, ping the slack channel dm-hsc-reprocessing
+# FGCM issues go to Eli Rykoff @eli
+# Most analysis issues (everything except single frame, sky, coadd, multiband and forced phot) go to Lauren MacCarthur @laurenam
+# Yusra AlSayyad @yusra is a good resource for everything else 
 
 #After all processing is done
 ln -s /datasets/hsc/repo/rerun/RC/$WEEK/DM-$DM/plots /home/$USER/public_html/${WEEK}_qaplots
 # makes plots at https://lsst.ncsa.illinois.edu/~$USER
 # Slack Simon @ksk and tell him you did the Squash stuff
-# Finally, edit WEEK and DM  copy_log.py, which will copy logs from your run directory to the repo
+# Finally, edit WEEK and DM in  copy_log.py, which will copy logs from your run directory to the repo
 python  copy_log.py
 
 # Congratulations, you have made it through an arduous RC2. Now look at notes_RC2_fakes.txt  
