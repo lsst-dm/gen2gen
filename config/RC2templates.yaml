@@ -1,14 +1,14 @@
 # The setup to load up the stack
 setup: |
   # Setup LSST stack for {week}
-  . /software/lsstsw/stack/loadLSST.bash 
-  setup git_lfs
-  export OMP_NUM_THREADS=1
-  setup lsst_distrib -k -t {week}
-  setup lsst_sims -t sims_{week}
+  # Need only be done once per screen
+  #. /software/lsstsw/stack/loadLSST.bash 
+  #export OMP_NUM_THREADS=1
+  #setup lsst_distrib -t {week}
+  #setup lsst_sims -k -t sims_{week}
 
-  setup -k -t {week} -v -r {gitpath}/qa_explorer
-  setup -k -t {week} -v -r {gitpath}/pipe_analysis
+  #setup -k -t {week} -v -r {gitpath}/qa_explorer
+  #setup -k -t {week} -v -r {gitpath}/pipe_analysis
 
 setup_squash: |
 
@@ -123,6 +123,15 @@ templates:
       multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
       --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
       --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str}
+
+  dispatch_verify_coaddAnalysis:
+    head_task: |
+      #!/bin/bash -l
+      {setup}
+    multi: >-
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw
+      /datasets/hsc/repo/rerun/{rerun}/verify/{filter}/tract-{tract}/coaddAnalysis_verify_job.json
 
   dispatch_verify_colorAnalysis:
     head_task: |
@@ -362,16 +371,17 @@ tasks_extname:
   multiBandDriver: '.sh'
   forcedPhotCcd: '.sl'
   visitAnalysis: '.sl'
+  writeObjectTable: '.sh'
   compareVisitAnalysis: '.sl'
   coaddAnalysis: '.sl'
   colorAnalysis: '.sl'
   compareCoaddAnalysis: '.sl'
   matchVisits: '.sl'
   dispatch_verify_colorAnalysis: '.sh'
+  dispatch_verify_coaddAnalysis: '.sh'
   matchedVisitMetrics: '.sl'
   dispatch_verify_matchedVisit: '.sh'
   validateDrp: '.sl'
-  writeObjectTable: '.sh'
   transformObjectCatalog: '.sh'
   consolidateObjectTable: '.sh'
   consolidateSourceTable: '.sh'
@@ -403,6 +413,7 @@ tasks_per_tract_filter:
   - compareCoaddAnalysis
   - matchVisits
   - matchedVisitMetrics
+  - dispatch_verify_coaddAnalysis
   - dispatch_verify_matchedVisit
   - validateDrp
 
@@ -441,6 +452,7 @@ tasks_to_execute_ordered:
   - multiBandDriver
   - forcedPhotCcd
 
+  - writeObjectTable
   - coaddAnalysis
   - colorAnalysis
   - compareCoaddAnalysis
@@ -448,10 +460,10 @@ tasks_to_execute_ordered:
   - matchVisits
 
   - dispatch_verify_colorAnalysis
+  - dispatch_verify_coaddAnalysis
   - matchedVisitMetrics
   - dispatch_verify_matchedVisit
   - validateDrp
-  - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
   - consolidateSourceTable

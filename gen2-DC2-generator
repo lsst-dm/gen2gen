@@ -30,6 +30,20 @@ class DC2generator:
             os.makedirs(self.filepath)
             print(f"# Created dirname:{self.filepath}")
 
+        # The git clone path
+        self.gitpath = os.path.join(self.filepath, 'git')
+
+        # Get the setup string
+        self.setup = self.templates['setup'].format(week=self.config.week,
+                                                    stack=self.config.stack,
+                                                    gitpath=self.gitpath)
+
+        # Get the git cloner sctipt
+        self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
+
+        self.builder = self.templates['builder'].format(gitpath=self.gitpath,
+                                                        setup=self.setup)
+
     def load_dataset(self):
         # Load up the manifest
         with open(self.config.dataset) as f:
@@ -78,7 +92,8 @@ class DC2generator:
         """ Format task per rerun/task only """
         outfile = self.task_filename_task(task, ext=ext)
         out = open(outfile, "w")
-        out.write(self.templates['setup'].format(week=self.config.week))
+        kw={'week':self.config.week, 'gitpath':self.gitpath}
+        out.write(self.templates['setup'].format(**kw))
         out.write(self.templates['templates'][task].format(rerun=self.rerun,
                                                            weeknumber=self.config.weeknumber))
         out.close()
@@ -108,7 +123,9 @@ class DC2generator:
 
         outfile = self.task_filename_task(task, ext=ext)
         out = open(outfile, "w")
-        out.write(self.templates['setup'].format(week=self.config.week))
+        kw={'week':self.config.week, 'gitpath':self.gitpath}
+#        out.write(self.templates['setup'].format(week=self.config.week))
+        out.write(self.templates['setup'].format(**kw))
         # Get the chunks per slice:
         set_of_visits = get_chunks(self.visits_tracts, nvisit)
         for chunk in set_of_visits:
@@ -127,14 +144,14 @@ class DC2generator:
         outfile = None
         head_task = False
         head_tract = False
-        kw = {'rerun': self.rerun, 'week': self.config.week}
+        kw = {'rerun': self.rerun, 'week': self.config.week, 'gitpath': self.gitpath}
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
             outfile = self.task_filename_task(task, ext=ext)
             out = open(outfile, "w")
             out.write(self.templates['templates'][task]['head_task'].format(**kw))
-            out.write(self.templates['setup'].format(week=self.config.week))
+            out.write(self.templates['setup'].format(**kw))
             head_task = True
 
         for tract in self.data['visits'].keys():
@@ -194,14 +211,14 @@ class DC2generator:
         outfile = None
         head_task = False
         head_tract = False
-        kw = {'rerun': self.rerun, 'week': self.config.week, 'filter_str': filter_str}
+        kw = {'rerun': self.rerun, 'week': self.config.week, 'filter_str': filter_str, 'gitpath': self.gitpath}
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
             outfile = self.task_filename_task(task, ext=ext)
             out = open(outfile, "w")
             out.write(self.templates['templates'][task]['head_task'].format(**kw))
-            out.write(self.templates['setup'].format(week=self.config.week))
+            out.write(self.templates['setup'].format(**kw))
             head_task = True
 
         for tract in self.data['patches'].keys():
@@ -253,7 +270,22 @@ class DC2generator:
             out.close()
             print(f"# file: {outfile} is ready")
 
+    def gitcloner(self):
+        clonerfile = os.path.join(self.filepath, 'cloner.sh')
+        with open(clonerfile, "w") as c:
+            c.write(self.cloner)
+        print(f"# file: {clonerfile} is ready")
+
+    def scons_builder(self):
+        builderfile = os.path.join(self.filepath, 'builder.sh')
+        with open(builderfile, "w") as c:
+            c.write(self.builder)
+        print(f"# file: {builderfile} is ready")
+
     def do_tasks(self):
+
+        self.gitcloner()
+        self.scons_builder()
 
         # Loop over tasks to execute
         for task in self.templates['tasks_to_execute_ordered']:
@@ -301,6 +333,8 @@ def cmdline():
                         help="The format for the output script files")
     parser.add_argument("--jobname", action="store", default=None,
                         help="The jobname")
+    parser.add_argument("--stack", action="store", default="stack",
+                        help="The stack to use")
     args = parser.parse_args()
     if not args.jobname:
         args.weeknumber = args.week[-2:]
