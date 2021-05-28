@@ -1,0 +1,36 @@
+./check_weekly.sh
+source /software/lsstsw/stack/loadLSST.bash
+conda config --set changeps1 false
+WEEK=w_2021_14
+DM=29519
+FAKEDM=29722
+./gen2-RC2-generator --DMticket DM-$FAKEDM --week $WEEK --rerun2 RC/$WEEK/DM-$DM --filepath /home/emorgan2/HSC/RC2fakes//rerun_scripts/{DMticket} --templates config/RC2fakes_templates.yaml --rerun_format RCfakes/{week}/{DMticket}
+cd /home/emorgan2/HSC/RC2fakes/rerun_scripts/DM-$FAKEDM
+
+source cloner.sh
+scl enable devtoolset-8 bash
+source builder.sh
+
+CWD=$(pwd)
+cd git/qa_explorer
+setup -j -r .
+scons
+cd $CWD
+
+cd git/pipe_analysis
+setup -j -r .
+scons
+cd $CWD
+
+#For RC
+SQUASH_USER=$USER
+SQUASH_password=*****
+
+#For RCsims
+FAKEDIR=/datasets/hsc/repo/rerun/RCfakes/${WEEK}/DM-${FAKEDM}/deepCoadd-results/9813/
+mkdir -p ${FAKEDIR}
+cp /datasets/hsc/repo/rerun/RCfakes/w_2020_34/DM-26490/deepCoadd-results/9813/fakeSourceCat-9813.parq $FAKEDIR
+cp /home/sr525/insertFakeSources/mbdConfigFakes.py multiBandDriver_config.py 
+FGCMDIR=/datasets/hsc/repo/rerun/RC//${WEEK}/DM-${DM}/FGCM/fgcm-results
+FAKEFGCMDIR=/datasets/hsc/repo/rerun/RCfakes/${WEEK}/DM-${FAKEDM}/fgcm-results
+ln -s $FGCMDIR $FAKEFGCMDIR

@@ -1,0 +1,323 @@
+root INFO: Loading config overrride file '/software/lsstsw/stack_20210415/stack/miniconda3-py38_4.9.2-0.5.0/Linux64/obs_subaru/21.0.0-33-g9da9dc4e+2fe0d98d97/config/fgcmFitCycle.py'
+CameraMapper INFO: Loading exposure registry from /datasets/hsc/repo/registry.sqlite3
+CameraMapper INFO: Loading calib registry from /datasets/hsc/repo/CALIB/calibRegistry.sqlite3
+CameraMapper INFO: Loading calib registry from /datasets/hsc/repo/CALIB/calibRegistry.sqlite3
+HscMapper WARN: Unable to find calib root directory
+root INFO: Running: /software/lsstsw/stack_20210415/stack/miniconda3-py38_4.9.2-0.5.0/Linux64/fgcmcal/21.0.0-16-g26cb9d6+c6b3cd9bfd/bin/fgcmFitCycle.py /datasets/hsc/repo --rerun RC/w_2021_18/DM-29946-sfm:RC/w_2021_18/DM-29946/FGCM --configfile fgcmFitCycleRC2_cycle04_config.py --clobber-config --config isFinalCycle=True
+conda.common.io INFO: overtaking stderr and stdout
+conda.common.io INFO: stderr and stdout yielding back
+fgcmFitCycle INFO: Logging to external logger.
+fgcmFitCycle INFO: Found 112 CCDs and 6 bands (g r i z N921 y)
+fgcmFitCycle INFO: AB offset (w/o throughput) estimated as 29.7737
+fgcmFitCycle INFO: Loading info on 432 exposures.
+fgcmFitCycle INFO: Exposures taken on 25 nights.
+fgcmFitCycle INFO: Band g first used in wash index 0
+fgcmFitCycle INFO: Band r first used in wash index 0
+fgcmFitCycle INFO: Band i first used in wash index 0
+fgcmFitCycle INFO: Band z first used in wash index 0
+fgcmFitCycle INFO: Band N921 first used in wash index 0
+fgcmFitCycle INFO: Band y first used in wash index 0
+fgcmFitCycle INFO: Compiling indices for 1 mirror coating(s).
+fgcmFitCycle INFO: PSF Candidate Flags found
+fgcmFitCycle INFO: Delta-mag from local background found
+fgcmFitCycle INFO: Removing 41 duplicate reference stars.
+fgcmFitCycle INFO: Observations matched in 0.2 seconds.
+fgcmFitCycle INFO: Flagging 0 stars as variable from previous cycles.
+fgcmFitCycle INFO: Flagging 23621 stars as reserved from previous cycles.
+fgcmFitCycle INFO: Flagging 841 stars as reference star outliers from previous cycles.
+fgcmFitCycle INFO: Observations matched in 0.1 seconds.
+fgcmFitCycle INFO: Done indexing in 0.4 seconds.
+fgcmFitCycle INFO: 9.60628% stars have a reference match in the g band.
+fgcmFitCycle INFO: 17.41925% stars have a reference match in the r band.
+fgcmFitCycle INFO: 27.56573% stars have a reference match in the i band.
+fgcmFitCycle INFO: 19.62660% stars have a reference match in the z band.
+fgcmFitCycle INFO: 16.27238% stars have a reference match in the N921 band.
+fgcmFitCycle INFO: 9.01825% stars have a reference match in the y band.
+fgcmFitCycle INFO: Done matching reference stars in 0.0 seconds.
+fgcmFitCycle INFO: Computed secZenith in 0.1 seconds.
+fgcmFitCycle INFO: Flagging 99084 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Default: fit 187 parameters.
+fgcmFitCycle INFO: Memory usage at FitCycle Prepared: 7752 MB current; 17622 MB peak.
+fgcmFitCycle INFO: Fit cycle 4 starting...
+fgcmFitCycle INFO: Flagged 0 bad exposures with no stars
+fgcmFitCycle INFO:  NO_STARS: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  NO_STARS: r band: 0 of 55 exposures
+fgcmFitCycle INFO:  NO_STARS: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  NO_STARS: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  NO_STARS: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  NO_STARS: y band: 0 of 111 exposures
+fgcmFitCycle INFO: Flagged 0 bad exposures with too few stars.
+fgcmFitCycle INFO:  TOO_FEW_STARS: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: r band: 0 of 55 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: y band: 0 of 111 exposures
+fgcmFitCycle INFO: Flagged 35 bad exposures with EXP_GRAY too negative.
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: g band: 5 of 56 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: r band: 1 of 55 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: i band: 10 of 92 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: z band: 2 of 90 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: y band: 17 of 111 exposures
+fgcmFitCycle INFO: Flagged 3 bad exposures with EXP_GRAY too positive.
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: r band: 2 of 55 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: y band: 1 of 111 exposures
+fgcmFitCycle INFO: Flagged 0 bad exposures with VAR_GRAY too large.
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: r band: 0 of 55 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: y band: 0 of 111 exposures
+fgcmFitCycle INFO: There are now 394 of 432 exposures that are "photometric"
+fgcmFitCycle INFO: Computed ccdDeltaBkg and expDeltaBkg in 7.04 seconds.
+fgcmFitCycle INFO: Flagging 102094 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Map plotting not available.  Sorry!
+fgcmFitCycle INFO: Found 133901 good stars for chisq
+/software/lsstsw/stack_20210415/stack/miniconda3-py38_4.9.2-0.5.0/Linux64/pipe_base/21.0.0-18-g546cdbd+18e1344c9b/python/lsst/pipe/base/argumentParser.py:686: FutureWarning: Gen2 Butler has been deprecated (Butler). It will be removed sometime after v23.0 but no earlier than the end of 2021.
+  namespace.butler = dafPersist.Butler(inputs=inputs, outputs=outputs)
+/software/lsstsw/stack_20210415/stack/miniconda3-py38_4.9.2-0.5.0/Linux64/pipe_base/21.0.0-18-g546cdbd+18e1344c9b/python/lsst/pipe/base/argumentParser.py:686: FutureWarning: Gen2 Butler has been deprecated (HscMapper). It will be removed sometime after v23.0 but no earlier than the end of 2021.
+  namespace.butler = dafPersist.Butler(inputs=inputs, outputs=outputs)
+fgcmFitCycle INFO: Chisq/dof = 2.166614 (1 iterations)
+fgcmFitCycle INFO: Chisq computation took 4.31 seconds.
+fgcmFitCycle INFO: Chisq computation took 2.09 seconds.
+fgcmFitCycle INFO: Median SED slope in g band (0.00074777)
+fgcmFitCycle INFO: Median SED slope in r band (0.00042062)
+fgcmFitCycle INFO: Median SED slope in i band (0.00035526)
+fgcmFitCycle INFO: Median SED slope in z band (0.00026598)
+fgcmFitCycle INFO: Median SED slope in N921 band (0.00008687)
+fgcmFitCycle INFO: Median SED slope in y band (0.00018509)
+fgcmFitCycle INFO: Flag 54 stars of 236210 with BAD_COLOR
+fgcmFitCycle INFO: Flag 140 stars of 236210 with BAD_COLOR
+fgcmFitCycle INFO: Flag 1023 stars of 236210 with BAD_COLOR
+fgcmFitCycle INFO: Flag 345 stars of 236210 with BAD_COLOR
+fgcmFitCycle INFO: Number of good exposures: 394
+fgcmFitCycle INFO: Flagging exposures on 4 bad nights with too few photometric exposures.
+fgcmFitCycle INFO: Flagged 10 exposures on bad nights.
+fgcmFitCycle INFO:  TOO_FEW_EXP_ON_NIGHT: g band: 1 of 56 exposures
+fgcmFitCycle INFO:  TOO_FEW_EXP_ON_NIGHT: r band: 2 of 55 exposures
+fgcmFitCycle INFO:  TOO_FEW_EXP_ON_NIGHT: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  TOO_FEW_EXP_ON_NIGHT: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  TOO_FEW_EXP_ON_NIGHT: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  TOO_FEW_EXP_ON_NIGHT: y band: 7 of 111 exposures
+fgcmFitCycle INFO: Flagging 102239 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Marked 60408 observations (4.1258%) as SUPERSTAR_OUTLIER
+fgcmFitCycle INFO: Flagging 104791 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Marked 70392 observations (4.7080%) as FOCALPLANE_OUTLIER
+fgcmFitCycle INFO: Flagging 107710 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Marked 514 observations (0.0363%) as FOCALPLANE_OUTLIER_REF
+fgcmFitCycle INFO: Flagging 107760 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Found 113556 good stars for step units
+fgcmFitCycle INFO: Step size computation took 3.42 seconds.
+fgcmFitCycle INFO: Memory usage at FitCycle Pre-Fit: 7816 MB current; 17622 MB peak.
+fgcmFitCycle INFO: FitCycle skipping fit because maxIter == 0
+fgcmFitCycle INFO: Abs throughput in g band: 0.6884
+fgcmFitCycle INFO: Abs throughput in r band: 0.6305
+fgcmFitCycle INFO: Abs throughput in i band: 0.6509
+fgcmFitCycle INFO: Abs throughput in z band: 0.6797
+fgcmFitCycle INFO: Abs throughput in N921 band: 0.7014
+fgcmFitCycle INFO: Abs throughput in y band: 0.6760
+fgcmFitCycle INFO: Memory usage at FitCycle Post-Fit: 7821 MB current; 17622 MB peak.
+fgcmFitCycle INFO: Chisq/dof = 1.768736 (2 iterations)
+fgcmFitCycle INFO: Chisq computation took 3.66 seconds.
+fgcmFitCycle INFO: Final computation of absolute offset.
+fgcmFitCycle INFO: Final abs throughput in g band = 0.6952
+fgcmFitCycle INFO: Final abs throughput in r band = 0.6297
+fgcmFitCycle INFO: Final abs throughput in i band = 0.6475
+fgcmFitCycle INFO: Final abs throughput in z band = 0.6794
+fgcmFitCycle INFO: Final abs throughput in N921 band = 0.7012
+fgcmFitCycle INFO: Final abs throughput in y band = 0.6776
+fgcmFitCycle INFO: Chisq computation took 1.91 seconds.
+fgcmFitCycle INFO: Memory usage at After recomputing chisq for all exposures: 7850 MB current; 17622 MB peak.
+fgcmFitCycle INFO: ExpGray computed for 432 exposures.
+fgcmFitCycle INFO: Computed CCDGray and ExpGray in 32.80 seconds.
+fgcmFitCycle INFO: sigExpGray (g) = 5.61 mmag
+fgcmFitCycle INFO: sigExpGray (r) = 2.16 mmag
+fgcmFitCycle INFO: sigExpGray (i) = 3.73 mmag
+fgcmFitCycle INFO: sigExpGray (z) = 2.95 mmag
+fgcmFitCycle INFO: sigExpGray (N921) = 5.00 mmag
+fgcmFitCycle INFO: sigExpGray (y) = 3.67 mmag
+fgcmFitCycle INFO: Could not find any matched exposures between bands g and r within 10.00 minutes
+fgcmFitCycle INFO: Could not find any matched exposures between bands r and i within 10.00 minutes
+fgcmFitCycle INFO: Could not find any matched exposures between bands i and z within 10.00 minutes
+fgcmFitCycle INFO: Could not find any matched exposures between bands z and N921 within 10.00 minutes
+fgcmFitCycle INFO: Memory usage at After computing CCD and Exp Gray: 7922 MB current; 17622 MB peak.
+fgcmFitCycle INFO: fit sigFgcm (g) (All) = 7.66 mmag
+fgcmFitCycle INFO: fit sigFgcm (g) (Blue25) = 7.94 mmag
+fgcmFitCycle INFO: fit sigFgcm (g) (Middle50) = 7.83 mmag
+fgcmFitCycle INFO: fit sigFgcm (g) (Red25) = 10.19 mmag
+fgcmFitCycle INFO: fit sigFgcm (r) (All) = 6.06 mmag
+fgcmFitCycle INFO: fit sigFgcm (r) (Blue25) = 6.64 mmag
+fgcmFitCycle INFO: fit sigFgcm (r) (Middle50) = 5.84 mmag
+fgcmFitCycle INFO: fit sigFgcm (r) (Red25) = 7.53 mmag
+fgcmFitCycle INFO: fit sigFgcm (i) (All) = 5.16 mmag
+fgcmFitCycle INFO: fit sigFgcm (i) (Blue25) = 5.51 mmag
+fgcmFitCycle INFO: fit sigFgcm (i) (Middle50) = 4.70 mmag
+fgcmFitCycle INFO: fit sigFgcm (i) (Red25) = 5.43 mmag
+fgcmFitCycle INFO: fit sigFgcm (z) (All) = 8.59 mmag
+fgcmFitCycle INFO: fit sigFgcm (z) (Blue25) = 9.47 mmag
+fgcmFitCycle INFO: fit sigFgcm (z) (Middle50) = 9.09 mmag
+fgcmFitCycle INFO: fit sigFgcm (z) (Red25) = 8.55 mmag
+fgcmFitCycle INFO: fit sigFgcm (N921) (All) = 5.32 mmag
+fgcmFitCycle INFO: fit sigFgcm (N921) (Blue25) = 5.91 mmag
+fgcmFitCycle INFO: fit sigFgcm (N921) (Middle50) = 5.62 mmag
+fgcmFitCycle INFO: fit sigFgcm (N921) (Red25) = 5.41 mmag
+fgcmFitCycle INFO: fit sigFgcm (y) (All) = 7.14 mmag
+fgcmFitCycle INFO: fit sigFgcm (y) (Blue25) = 8.16 mmag
+fgcmFitCycle INFO: fit sigFgcm (y) (Middle50) = 7.87 mmag
+fgcmFitCycle INFO: fit sigFgcm (y) (Red25) = 7.98 mmag
+fgcmFitCycle INFO: Done computing sigFgcm in 3.22 sec.
+fgcmFitCycle INFO: reserved sigFgcm (g) (All) = 8.10 mmag
+fgcmFitCycle INFO: reserved sigFgcm (g) (Blue25) = 8.07 mmag
+fgcmFitCycle INFO: reserved sigFgcm (g) (Middle50) = 8.47 mmag
+fgcmFitCycle INFO: reserved sigFgcm (g) (Red25) = 8.61 mmag
+fgcmFitCycle INFO: reserved sigFgcm (r) (All) = 6.42 mmag
+fgcmFitCycle INFO: reserved sigFgcm (r) (Blue25) = 6.43 mmag
+fgcmFitCycle INFO: reserved sigFgcm (r) (Middle50) = 6.04 mmag
+fgcmFitCycle INFO: reserved sigFgcm (r) (Red25) = 8.46 mmag
+fgcmFitCycle INFO: reserved sigFgcm (i) (All) = 5.37 mmag
+fgcmFitCycle INFO: reserved sigFgcm (i) (Blue25) = 5.66 mmag
+fgcmFitCycle INFO: reserved sigFgcm (i) (Middle50) = 4.95 mmag
+fgcmFitCycle INFO: reserved sigFgcm (i) (Red25) = 5.71 mmag
+fgcmFitCycle INFO: reserved sigFgcm (z) (All) = 8.64 mmag
+fgcmFitCycle INFO: reserved sigFgcm (z) (Blue25) = 8.16 mmag
+fgcmFitCycle INFO: reserved sigFgcm (z) (Middle50) = 8.48 mmag
+fgcmFitCycle INFO: reserved sigFgcm (z) (Red25) = 9.30 mmag
+fgcmFitCycle INFO: reserved sigFgcm (N921) (All) = 5.79 mmag
+fgcmFitCycle INFO: reserved sigFgcm (N921) (Blue25) = 5.96 mmag
+fgcmFitCycle INFO: reserved sigFgcm (N921) (Middle50) = 5.70 mmag
+fgcmFitCycle INFO: reserved sigFgcm (N921) (Red25) = 6.09 mmag
+fgcmFitCycle INFO: reserved sigFgcm (y) (All) = 7.23 mmag
+fgcmFitCycle INFO: reserved sigFgcm (y) (Blue25) = 7.72 mmag
+fgcmFitCycle INFO: reserved sigFgcm (y) (Middle50) = 8.11 mmag
+fgcmFitCycle INFO: reserved sigFgcm (y) (Red25) = 8.43 mmag
+fgcmFitCycle INFO: Done computing sigFgcm in 2.70 sec.
+fgcmFitCycle INFO: Memory usage at After computing sigFGCM: 7926 MB current; 17622 MB peak.
+fgcmFitCycle INFO: Flagged 0 bad exposures with no stars
+fgcmFitCycle INFO:  NO_STARS: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  NO_STARS: r band: 0 of 55 exposures
+fgcmFitCycle INFO:  NO_STARS: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  NO_STARS: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  NO_STARS: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  NO_STARS: y band: 0 of 111 exposures
+fgcmFitCycle INFO: Flagged 0 bad exposures with too few stars.
+fgcmFitCycle INFO:  TOO_FEW_STARS: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: r band: 0 of 55 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  TOO_FEW_STARS: y band: 0 of 111 exposures
+fgcmFitCycle INFO: Flagged 34 bad exposures with EXP_GRAY too negative.
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: g band: 5 of 56 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: r band: 2 of 55 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: i band: 8 of 92 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: z band: 2 of 90 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_NEGATIVE: y band: 17 of 111 exposures
+fgcmFitCycle INFO: Flagged 2 bad exposures with EXP_GRAY too positive.
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: r band: 2 of 55 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  EXP_GRAY_TOO_POSITIVE: y band: 0 of 111 exposures
+fgcmFitCycle INFO: Flagged 0 bad exposures with VAR_GRAY too large.
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: g band: 0 of 56 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: r band: 0 of 55 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: i band: 0 of 92 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: z band: 0 of 90 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: N921 band: 0 of 28 exposures
+fgcmFitCycle INFO:  VAR_GRAY_TOO_LARGE: y band: 0 of 111 exposures
+fgcmFitCycle INFO: There are now 396 of 432 exposures that are "photometric"
+fgcmFitCycle INFO: Computing retrieval integrals
+fgcmFitCycle INFO: Found 113556 good stars for retrieval
+fgcmFitCycle INFO: Running retrieval on 4 cores
+fgcmFitCycle INFO: Computed retrieved integrals in 1.96 seconds.
+fgcmFitCycle INFO: Memory usage at After computing retrieved integrals: 7924 MB current; 17622 MB peak.
+fgcmFitCycle INFO: Retrieving PWV Values...
+fgcmFitCycle INFO: Found 13240 good reserve stars for SigmaCal
+fgcmFitCycle INFO: Running SigmaCal on 4 cores
+fgcmFitCycle INFO: Best sigmaCal (g band) = 2.10 mmag
+fgcmFitCycle INFO: Best sigmaCal (r band) = 3.00 mmag
+fgcmFitCycle INFO: Best sigmaCal (i band) = 3.00 mmag
+fgcmFitCycle INFO: Best sigmaCal (z band) = 2.39 mmag
+fgcmFitCycle INFO: Best sigmaCal (N921 band) = 3.00 mmag
+fgcmFitCycle INFO: Best sigmaCal (y band) = 1.65 mmag
+fgcmFitCycle INFO: offsetRef (g) (All) = -0.09 +/- 22.29 mmag
+fgcmFitCycle INFO: offsetRef (g) (Blue25) = -5.27 +/- 23.83 mmag
+fgcmFitCycle INFO: offsetRef (g) (Middle50) = 1.95 +/- 25.23 mmag
+fgcmFitCycle INFO: offsetRef (g) (Red25) = 7.23 +/- 40.87 mmag
+fgcmFitCycle INFO: Marked 2 reference stars as REFSTAR_OUTLIER from observations in the g band.
+fgcmFitCycle INFO: offsetRef (r) (All) = 0.11 +/- 19.78 mmag
+fgcmFitCycle INFO: offsetRef (r) (Blue25) = -5.98 +/- 18.78 mmag
+fgcmFitCycle INFO: offsetRef (r) (Middle50) = -0.40 +/- 20.17 mmag
+fgcmFitCycle INFO: offsetRef (r) (Red25) = 7.29 +/- 27.27 mmag
+fgcmFitCycle INFO: Marked 2 reference stars as REFSTAR_OUTLIER from observations in the r band.
+fgcmFitCycle INFO: offsetRef (i) (All) = -0.98 +/- 20.56 mmag
+fgcmFitCycle INFO: offsetRef (i) (Blue25) = 3.90 +/- 18.67 mmag
+fgcmFitCycle INFO: offsetRef (i) (Middle50) = 0.56 +/- 18.41 mmag
+fgcmFitCycle INFO: offsetRef (i) (Red25) = -12.76 +/- 19.42 mmag
+fgcmFitCycle INFO: Marked 5 reference stars as REFSTAR_OUTLIER from observations in the i band.
+fgcmFitCycle INFO: offsetRef (z) (All) = 0.19 +/- 19.43 mmag
+fgcmFitCycle INFO: offsetRef (z) (Blue25) = -5.31 +/- 19.07 mmag
+fgcmFitCycle INFO: offsetRef (z) (Middle50) = -3.33 +/- 19.84 mmag
+fgcmFitCycle INFO: offsetRef (z) (Red25) = 8.33 +/- 20.17 mmag
+fgcmFitCycle INFO: offsetRef (N921) (All) = -0.91 +/- 21.27 mmag
+fgcmFitCycle INFO: offsetRef (N921) (Blue25) = 16.37 +/- 22.23 mmag
+fgcmFitCycle INFO: offsetRef (N921) (Middle50) = 0.58 +/- 20.35 mmag
+fgcmFitCycle INFO: offsetRef (N921) (Red25) = -13.15 +/- 20.70 mmag
+fgcmFitCycle INFO: Marked 2 reference stars as REFSTAR_OUTLIER from observations in the N921 band.
+fgcmFitCycle INFO: offsetRef (y) (All) = 0.99 +/- 21.43 mmag
+fgcmFitCycle INFO: offsetRef (y) (Blue25) = -0.07 +/- 25.50 mmag
+fgcmFitCycle INFO: offsetRef (y) (Middle50) = 5.59 +/- 25.97 mmag
+fgcmFitCycle INFO: offsetRef (y) (Red25) = 7.76 +/- 23.77 mmag
+fgcmFitCycle INFO: Marked 2 reference stars as REFSTAR_OUTLIER from observations in the y band.
+fgcmFitCycle INFO: Done computing sigmaRef in 2.25 sec.
+fgcmFitCycle INFO: Building zeropoint structure...
+fgcmFitCycle INFO: 48384 exposure/ccd sets have exposures with >=5 good ccds
+fgcmFitCycle INFO: 42521 CCDs are Good (>=5 stars; err <= 0.050)
+fgcmFitCycle INFO: 5863 CCDs recovered from good exposures (>=5 good CCDs, etc.)
+fgcmFitCycle INFO: 44352 CCDs marked as photometric, used in fit
+fgcmFitCycle INFO: 0 CCDs marked as photometric, not used in fit
+fgcmFitCycle INFO: 4032 CCDs marked non-photometric, on a night with a fit
+fgcmFitCycle INFO: 0 CCDs on nights without a fit (assume standard atmosphere)
+fgcmFitCycle INFO: 0 CCDs marked as hopeless (cannot compute zeropoint)
+fgcmFitCycle INFO: Making I1/R1 plots...
+fgcmFitCycle INFO: Making zeropoint summary plots...
+fgcmFitCycle INFO: Chisq/dof = 1.508372 (3 iterations)
+fgcmFitCycle INFO: Chisq computation took 10.89 seconds.
+fgcmFitCycle INFO: reserved/crunched sigFgcm (g) (All) = 4.66 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (g) (Blue25) = 3.97 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (g) (Middle50) = 5.28 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (g) (Red25) = 8.27 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (r) (All) = 5.00 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (r) (Blue25) = 5.00 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (r) (Middle50) = 4.56 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (r) (Red25) = 7.54 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (i) (All) = 4.36 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (i) (Blue25) = 5.31 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (i) (Middle50) = 4.01 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (i) (Red25) = 4.77 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (z) (All) = 2.89 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (z) (Blue25) = 3.10 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (z) (Middle50) = 3.06 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (z) (Red25) = 3.51 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (N921) (All) = 4.48 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (N921) (Blue25) = 4.73 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (N921) (Middle50) = 4.46 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (N921) (Red25) = 4.65 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (y) (All) = 3.41 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (y) (Blue25) = 6.69 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (y) (Middle50) = 4.00 mmag
+fgcmFitCycle INFO: reserved/crunched sigFgcm (y) (Red25) = 4.23 mmag
+fgcmFitCycle INFO: Done computing sigFgcm in 2.47 sec.
+fgcmFitCycle INFO: Memory usage at After computing zeropoints: 7940 MB current; 17622 MB peak.
+fgcmFitCycle INFO: Flagging 106843 of 236210 stars with TOO_FEW_OBS
+fgcmFitCycle INFO: Map plotting not available.  Sorry!
+fgcmFitCycle INFO: Memory usage at FitCycle Completed: 7940 MB current; 17622 MB peak.
+fgcmFitCycle INFO: Everything is in place to run fgcmOutputProducts.py

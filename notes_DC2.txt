@@ -1,0 +1,26 @@
+./check_weekly.sh
+export LSST_CONDA_ENV_NAME=my-env
+source /software/lsstsw/stack/loadLSST.bash 
+conda config --set changeps1 false
+WEEK=w_2021_20
+DM=30297
+
+setup lsst_distrib $WEEK
+
+./gen2-DC2-generator --DMticket DM-${DM} --week ${WEEK} --filepath /home/emorgan2/HSC/DC2//{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
+
+cd /home/emorgan2/HSC/DC2/DM-$DM
+#source cloner.sh
+#scl enable devtoolset-8 bash
+#source builder.sh
+
+CWD=$(pwd)
+cd git/qa_explorer
+setup -j -r .
+scons
+cd $CWD
+
+cd git/pipe_analysis
+setup -j -r .
+scons
+cd $CWD
