@@ -1,26 +1,53 @@
-./check_weekly.sh
-export LSST_CONDA_ENV_NAME=my-env
-source /software/lsstsw/stack/loadLSST.bash 
-conda config --set changeps1 false
+# All this should be performed in a screen session (e.g. screen -S DC2)
+# on  lsst-condorprod-sub01 (which you can log into through lsst-login
+# You can log out of a screen session with ctrl-a-d and then log back in with screen -r DC2
+
+# Set week and DM. The DM is detrermined when you make a "DC2 reprocessing with $WEEK" JIRA Ticket
+# Assign to self
+# Team- Data Facility
+# Watchers- yusra
+# Epic Link- LOE: Periodic reprocessing of test data sets
 WEEK=w_2021_20
 DM=30297
 
+# Basic Setup, confirm the week's stack you want is ready 
+export LSST_CONDA_ENV_NAME=my-env
+source /software/lsstsw/stack/loadLSST.bash 
+conda config --set changeps1 fals
+
+eups list lsst_distrib
 setup lsst_distrib $WEEK
 
-./gen2-DC2-generator --DMticket DM-${DM} --week ${WEEK} --filepath /home/emorgan2/HSC/DC2//{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
+# Seeting up the gen2 RC2 scripts and copying some config files
+mkdir -p /home/$USER/HSC/DC2
+cp filter_config_multi.py /home/$USER/HSC/DC2/.
+cp filter_config_2021_12.py /home/$USER/HSC/DC2/. 
 
-cd /home/emorgan2/HSC/DC2/DM-$DM
-#source cloner.sh
-#scl enable devtoolset-8 bash
-#source builder.sh
+./gen2-DC2-generator --DMticket DM-${DM} --week ${WEEK} --filepath /home/$USER/HSC/DC2//{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
 
-CWD=$(pwd)
-cd git/qa_explorer
-setup -j -r .
-scons
-cd $CWD
+cd /home/$USER/HSC/DC2/DM-$DM
+scl enable devtoolset-8 bash
 
-cd git/pipe_analysis
-setup -j -r .
-scons
-cd $CWD
+# scl kills your setup and variables, so after reassigning week IDENTICALLY to above, we setup our stack
+WEEK=w_2021_20
+source /software/lsstsw/stack/loadLSST.bash
+setup lsst_distrib $WEEK
+
+# You should be ready to start running from the run directory (in your screen with the above setup) just run:
+source 01_singleFrameDriver.sh; 
+
+# The steps mostly need to be run sequentially. To automate I did:
+alias swait='while [ `squeue | grep $USER | wc -l` -gt 0 ]; do sleep 300; echo "Waiting".; done;'
+# swait waits until all jobs are done
+source 01_singleFrameDriver.sh; swait source 02_makeSkyMap.sh; swait source 03_coaddDriver.sh; swait source04_multiBandDriver.sh; swait source 05_matchedVisitMetrics.sh 
+# Will complete in about a week
+
+
+# You need to regularly check logs. There's no good way to do this. Many scripts write to slurm logs so
+# tail dc2sfm* 
+# shows you the last few lines of all single frame processing jobs and will usually show you if they are okay.
+# similarly for tail coadd*, tail mt*
+# The names and locations of logs are listed in either the .sh script or its associated .sl or .mp files
+
+# I there are errors in the logs, ping the slack channel dm-hsc-reprocessing
+

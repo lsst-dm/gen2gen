@@ -1,11 +1,35 @@
-./check_weekly.sh
-source /software/lsstsw/stack/loadLSST.bash
-conda config --set changeps1 false
-WEEK=w_2021_14
-DM=29519
+# All this should be performed in a screen session (e.g. screen -S RC2fakes)
+# on  lsst-condorprod-sub01 (which you can log into through lsst-login
+# You can log out of a screen session with ctrl-a-d and then log back in with screen -r RC2fakes
+
+# RC2 fakes runs occur after a successful RC2 run (I think you technically only need to run through forecedPhot)
+# Set week and DM. These are identical to the corresponding RC (RC2 fakes borrow data from that run)
+
+# RC2 fakes has less analysis than RC2 and is much simpler. No FGCM, no SQUASH and only 5 script in the run
+
+WEEK=w_2021_18
+DM=29946
+
+# You must also setup the FAKEDM, which is taken after you make a JIRA ticket for the fakes run
+# Assign to self
+# Team- Data Facility
+# Watchers- sophiereed 
+# Note that Sophi Reed is in charge of this
+# Epic Link- LOE: Periodic reprocessing of test data sets
+
 FAKEDM=29722
-./gen2-RC2-generator --DMticket DM-$FAKEDM --week $WEEK --rerun2 RC/$WEEK/DM-$DM --filepath /home/emorgan2/HSC/RC2fakes//rerun_scripts/{DMticket} --templates config/RC2fakes_templates.yaml --rerun_format RCfakes/{week}/{DMticket}
-cd /home/emorgan2/HSC/RC2fakes/rerun_scripts/DM-$FAKEDM
+
+# Basic Setup, confirm the week's stack you want is ready 
+source /software/lsstsw/stack/loadLSST.bash
+eups list lsst_distrib
+setup lsst_distrib $WEEK
+
+# Seeting up the gen2 RC2 scripts
+mkdir -p /home/$USER/HSC/RC2fakes/rerun_scripts/
+
+#RC2 fakes script generation. There's a weird hack where the DM from the Normal RC2 run goes in the --rerun option which is where GOODDM went for the normal RC2.
+./gen2-RC2-generator --DMticket DM-$FAKEDM --week $WEEK --rerun2 RC/$WEEK/DM-$DM --filepath /home/$USER/HSC/RC2fakes//rerun_scripts/{DMticket} --templates config/RC2fakes_templates.yaml --rerun_format RCfakes/{week}/{DMticket}
+cd /home/$USER/HSC/RC2fakes/rerun_scripts/DM-$FAKEDM
 
 source cloner.sh
 scl enable devtoolset-8 bash
@@ -22,15 +46,15 @@ setup -j -r .
 scons
 cd $CWD
 
-#For RC
-SQUASH_USER=$USER
-SQUASH_password=*****
-
-#For RCsims
+#We copy a fake source cat to the FAKEDIR
 FAKEDIR=/datasets/hsc/repo/rerun/RCfakes/${WEEK}/DM-${FAKEDM}/deepCoadd-results/9813/
 mkdir -p ${FAKEDIR}
 cp /datasets/hsc/repo/rerun/RCfakes/w_2020_34/DM-26490/deepCoadd-results/9813/fakeSourceCat-9813.parq $FAKEDIR
+# We copy a config file to our rundir
 cp /home/sr525/insertFakeSources/mbdConfigFakes.py multiBandDriver_config.py 
+# We link the FGCM results from the RC2 run to our fakedir
 FGCMDIR=/datasets/hsc/repo/rerun/RC//${WEEK}/DM-${DM}/FGCM/fgcm-results
 FAKEFGCMDIR=/datasets/hsc/repo/rerun/RCfakes/${WEEK}/DM-${FAKEDM}/fgcm-results
 ln -s $FGCMDIR $FAKEFGCMDIR
+
+# Note that the last three RC Fake runs failed at multiband (the final step)
