@@ -1,8 +1,8 @@
 # All this should be performed in a screen session (e.g. screen -S DC2)
-# on  lsst-condorprod-sub01 (which you can log into through lsst-login
+# on  lsst-condorprod-sub01 (which you can log into through lsst-login)
 # You can log out of a screen session with ctrl-a-d and then log back in with screen -r DC2
 
-# Set week and DM. The DM is detrermined when you make a "DC2 reprocessing with $WEEK" JIRA Ticket
+# Set WEEK and DM. The DM is detrermined when you make a "DC2 reprocessing with $WEEK" JIRA Ticket
 # Assign to self
 # Team- Data Facility
 # Watchers- yusra
@@ -18,7 +18,7 @@ conda config --set changeps1 fals
 eups list lsst_distrib
 setup lsst_distrib $WEEK
 
-# Seeting up the gen2 RC2 scripts and copying some config files
+# Setting up the gen2 RC2 scripts and copying some config files
 mkdir -p /home/$USER/HSC/DC2
 cp filter_config_multi.py /home/$USER/HSC/DC2/.
 cp filter_config_2021_12.py /home/$USER/HSC/DC2/. 
