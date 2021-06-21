@@ -73,6 +73,14 @@ source 05_visitAnalysis.sh
 
 # The remaining steps (post forced photometry) take ~1 day but require more log reading
 
+# Before running the steps that dispatch results to Squash (steps 15, 16 and 18), make sure following environment variables
+# are set (see https://pipelines.lsst.io/modules/lsst.verify/scripts/dispatch_verify.py.html)
+export DATASET="HSC_RC2"
+export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-30424"
+export RUN_ID="DM-30424"
+export RUN_ID_URL="https://jira.lsstcorp.org/browse/DM-30424"
+export VERSION_TAG="w_2021_22"
+
 # You need to regularly check logs. There's no good way to do this. Many scripts write to slurm logs so
 # tail sfm* 
 # shows you the last few lines of all single frame processing jobs and will usually show you if they are okay.
