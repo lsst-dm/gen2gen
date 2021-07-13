@@ -96,7 +96,8 @@ export VERSION_TAG="w_2021_22"
 ln -s /datasets/hsc/repo/rerun/RC/$WEEK/DM-$DM/plots /home/$USER/public_html/${WEEK}_qaplots
 # makes plots at https://lsst.ncsa.illinois.edu/~$USER
 # Slack Simon @ksk and tell him you did the Squash stuff
-# Finally, edit WEEK and DM in  copy_log.py, which will copy logs from your run directory to the repo
+# Finally, edit WEEK and DM in copy_log.py, and replace the absolute path in variable INDIR with your username.
+# Then run the script, which will copy logs from your run directory to the repo
 python  copy_log.py
 
 # Congratulations, you have made it through an arduous RC2. Now look at notes_RC2_fakes.txt  
