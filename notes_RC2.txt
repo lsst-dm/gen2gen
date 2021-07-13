@@ -75,7 +75,7 @@ source 05_visitAnalysis.sh
 
 # Before running the steps that dispatch results to Squash (steps 15, 16 and 18), make sure following environment variables
 # are set (see https://pipelines.lsst.io/modules/lsst.verify/scripts/dispatch_verify.py.html)
-export DATASET="HSC_RC2"
+export DATASET="HSC RC2"
 export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-30424"
 export RUN_ID="DM-30424"
 export RUN_ID_URL="https://jira.lsstcorp.org/browse/DM-30424"
