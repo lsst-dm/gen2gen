@@ -10,9 +10,9 @@
 WEEK=w_2021_20
 DM=30297
 
-# Basic Setup, confirm the week's stack you want is ready 
+# Basic Setup, confirm the week's stack you want is ready
 export LSST_CONDA_ENV_NAME=my-env
-source /software/lsstsw/stack/loadLSST.bash 
+source /software/lsstsw/stack/loadLSST.bash
 conda config --set changeps1 fals
 
 eups list lsst_distrib
@@ -21,7 +21,7 @@ setup lsst_distrib $WEEK
 # Setting up the gen2 RC2 scripts and copying some config files
 mkdir -p /home/$USER/HSC/DC2
 cp filter_config_multi.py /home/$USER/HSC/DC2/.
-cp filter_config_2021_12.py /home/$USER/HSC/DC2/. 
+cp filter_config_2021_12.py /home/$USER/HSC/DC2/.
 
 ./gen2-DC2-generator --DMticket DM-${DM} --week ${WEEK} --filepath /home/$USER/HSC/DC2//{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
 
@@ -34,17 +34,17 @@ source /software/lsstsw/stack/loadLSST.bash
 setup lsst_distrib $WEEK
 
 # You should be ready to start running from the run directory (in your screen with the above setup) just run:
-source 01_singleFrameDriver.sh; 
+source 01_singleFrameDriver.sh;
 
 # The steps mostly need to be run sequentially. To automate I did:
 alias swait='while [ `squeue | grep $USER | wc -l` -gt 0 ]; do sleep 300; echo "Waiting".; done;'
 # swait waits until all jobs are done
-source 01_singleFrameDriver.sh; swait source 02_makeSkyMap.sh; swait source 03_coaddDriver.sh; swait source04_multiBandDriver.sh; swait source 05_matchedVisitMetrics.sh 
+source 01_singleFrameDriver.sh; swait source 02_makeSkyMap.sh; swait source 03_coaddDriver.sh; swait source04_multiBandDriver.sh; swait source 05_matchedVisitMetrics.sh
 # Will complete in about a week
 
 
 # You need to regularly check logs. There's no good way to do this. Many scripts write to slurm logs so
-# tail dc2sfm* 
+# tail dc2sfm*
 # shows you the last few lines of all single frame processing jobs and will usually show you if they are okay.
 # similarly for tail coadd*, tail mt*
 # The names and locations of logs are listed in either the .sh script or its associated .sl or .mp files

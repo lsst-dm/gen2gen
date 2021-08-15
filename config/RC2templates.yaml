@@ -2,7 +2,7 @@
 setup: |
   # Setup LSST stack for {week}
   # Need only be done once per screen
-  #. /software/lsstsw/stack/loadLSST.bash 
+  #. /software/lsstsw/stack/loadLSST.bash
   #export OMP_NUM_THREADS=1
   #setup lsst_distrib -t {week}
   #setup lsst_sims -k -t sims_{week}
@@ -84,7 +84,7 @@ templates:
       {setup}
     multi: >-
       singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
-      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket' 
+      --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket'
       --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
 
   fakesDriver:
@@ -113,7 +113,7 @@ templates:
       coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}
       --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
       --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
-      --config makeCoaddTempExp.externalPhotoCalibName=fgcm assembleCoadd.externalPhotoCalibName=fgcm assembleCoadd.assembleStaticSkyModel.externalPhotoCalibName=fgcm 
+      --config makeCoaddTempExp.externalPhotoCalibName=fgcm assembleCoadd.externalPhotoCalibName=fgcm assembleCoadd.assembleStaticSkyModel.externalPhotoCalibName=fgcm
 
   multiBandDriver:
     head_task: |

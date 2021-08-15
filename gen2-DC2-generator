@@ -7,37 +7,27 @@ import argparse
 
 
 class DC2generator:
-
     """ A class to generate LSST Gen2 scipts"""
-
     def __init__(self, **keys):
-
         # Load the configurarion
         self.config = types.SimpleNamespace(**keys)
-
         # Read in yaml dataset conf manifest
         self.load_dataset()
-
         # Read in yaml templates conf manifest
         self.load_templates()
-
         # Define rerun
         self.rerun = self.config.rerun
-
         # And the outpath
         self.filepath = self.config.filepath.format(week=self.config.week, DMticket=self.config.DMticket)
         if not os.path.exists(self.filepath):
             os.makedirs(self.filepath)
             print(f"# Created dirname:{self.filepath}")
-
         # The git clone path
         self.gitpath = os.path.join(self.filepath, 'git')
-
         # Get the setup string
         self.setup = self.templates['setup'].format(week=self.config.week,
                                                     stack=self.config.stack,
                                                     gitpath=self.gitpath)
-
         # Get the git cloner sctipt
         self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
 
@@ -88,21 +78,18 @@ class DC2generator:
         return name
 
     def task_per_task(self, task, ext=''):
-
         """ Format task per rerun/task only """
         outfile = self.task_filename_task(task, ext=ext)
         out = open(outfile, "w")
         kw={'week':self.config.week, 'gitpath':self.gitpath}
         out.write(self.templates['setup'].format(**kw))
-        out.write(self.templates['templates'][task].format(rerun=self.rerun,
-                                                           weeknumber=self.config.weeknumber))
+        out.write(self.templates['templates'][task].
+                  format(rerun=self.rerun, weeknumber=self.config.weeknumber))
         out.close()
         print(f"# file: {outfile} is ready")
 
     def task_per_visit_all(self, task, nvisit=20, ext=''):
-
         """ Format a task with all visits """
-
         outfile = self.task_filename_task(task, ext=ext)
         out = open(outfile, "w")
         out.write(self.templates['setup'].format(week=self.config.week))
@@ -118,9 +105,7 @@ class DC2generator:
         print(f"# file: {outfile} is ready")
 
     def task_per_visit_tracts(self, task, nvisit=20, ext=''):
-
         """ Format a task with visits per tract """
-
         outfile = self.task_filename_task(task, ext=ext)
         out = open(outfile, "w")
         kw={'week':self.config.week, 'gitpath':self.gitpath}
@@ -138,9 +123,7 @@ class DC2generator:
         print(f"# file: {outfile} is ready")
 
     def task_per_tract_filter(self, task, ext=''):
-
         """ Format a task per tract and filter"""
-
         outfile = None
         head_task = False
         head_tract = False
@@ -155,11 +138,9 @@ class DC2generator:
             head_task = True
 
         for tract in self.data['visits'].keys():
-
             if tract == 'all':
                 print(f"# Skipping tract: {tract}")
                 continue
-
             # Head per tract
             if 'head_tract' in self.templates['templates'][task]:
                 outfile = self.task_filename_tract(task, tract, ext=ext)
@@ -169,11 +150,9 @@ class DC2generator:
                 head_tract = True
 
             for filter in self.data['visits'][tract].keys():
-
                 if not head_task and not head_tract:
                     outfile = self.task_filename_tract(task, tract, ext=ext)
                     out = open(outfile, "w")
-
                 # get the visit in the format we need
                 visit = self.get_visit_str(tract, filter)
                 kw.update({'visit': visit, 'filter': filter, 'tract': tract})
@@ -184,7 +163,6 @@ class DC2generator:
                     out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
                 else:
                     out.write(self.templates['templates'][task].format(**kw) + '\n')
-
                 # close file per filter
                 if not head_task and not head_tract:
                     out.close()
@@ -193,7 +171,6 @@ class DC2generator:
             # Out the loop print
             if 'no_loop' in self.templates['templates'][task]:
                 out.write(self.templates['templates'][task]['no_loop'].format(**kw))
-
             # close file accordingly by tract
             if head_tract:
                 out.close()
@@ -204,9 +181,7 @@ class DC2generator:
             print(f"# file: {outfile} is ready")
 
     def task_per_tract_patch(self, task, ext=''):
-
         """ Format a task per tract and filter"""
-
         filter_str = get_list_str(self.data['filters'])
         outfile = None
         head_task = False
@@ -222,11 +197,9 @@ class DC2generator:
             head_task = True
 
         for tract in self.data['patches'].keys():
-
             if tract == 'all':
                 print(f"# Skipping tract: {tract}")
                 continue
-
             # Head per tract
             if 'head_tract' in self.templates['templates'][task]:
                 outfile = self.task_filename_tract(task, tract, ext=ext)
@@ -236,11 +209,9 @@ class DC2generator:
                 head_tract = True
 
             for patch in self.data['patches'][tract]:
-
                 if not head_task and not head_tract:
                     outfile = self.task_filename_tract(task, tract, ext=ext)
                     out = open(outfile, "w")
-
                 # get the visit in the format we need
                 patch_alt = f"{patch[0]},{patch[1]}"
                 kw.update({'tract': tract, 'patch': patch, 'patch_alt': patch_alt})
@@ -251,7 +222,6 @@ class DC2generator:
                     out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
                 else:
                     out.write(self.templates['templates'][task].format(**kw) + '\n')
-
                 # close file per filter
                 if not head_task and not head_tract:
                     out.close()
@@ -260,7 +230,6 @@ class DC2generator:
             # Out the loop print
             if 'no_loop' in self.templates['templates'][task]:
                 out.write(self.templates['templates'][task]['no_loop'].format(**kw))
-
             # close file accordingly by tract
             if head_tract:
                 out.close()
@@ -283,10 +252,8 @@ class DC2generator:
         print(f"# file: {builderfile} is ready")
 
     def do_tasks(self):
-
         self.gitcloner()
         self.scons_builder()
-
         # Loop over tasks to execute
         for task in self.templates['tasks_to_execute_ordered']:
             ext = self.templates['tasks_extname'][task]
@@ -317,7 +284,6 @@ def get_chunks(l, n):
 
 
 def cmdline():
-
     parser = argparse.ArgumentParser(description="Gen2 Generation script")
     parser.add_argument("--DMticket", action="store", required=True,
                         help="The DM-ticket number [i.e.: DM-XXXX]")
@@ -346,7 +312,6 @@ def cmdline():
 
 
 if __name__ == "__main__":
-
     args = cmdline()
     gen2 = DC2generator(**args.__dict__)
     gen2.do_tasks()

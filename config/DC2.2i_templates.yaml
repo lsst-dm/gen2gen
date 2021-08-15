@@ -62,17 +62,17 @@ templates:
       --job mt{tract}-{patch} --core 1 --time 45000 -c measureCoaddSources.propagateFlags.ccdName='detector'
       --id filter={filter_str} tract={tract} patch={patch_alt} --configfile /home/$USER/HSC/DC2/filter_config_multi.py;
 
-  matchedVisitMetrics: 
+  matchedVisitMetrics:
     head_task: |
       #!/bin/bash -l
       OPTIONS="-p normal -N 1 --ntasks-per-node=1 -t 24:00:00"
     multi: >-
-      sbatch $OPTIONS 
-      --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3828/{filter} 
-      --config  instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract=3828 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py"; 
-      sbatch $OPTIONS 
-      --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3829/{filter} 
-      --config  instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract=3829 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py"; 
+      sbatch $OPTIONS
+      --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3828/{filter}
+      --config  instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract=3828 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
+      sbatch $OPTIONS
+      --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3829/{filter}
+      --config  instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract=3829 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
 
 #  matchedVisitMetrics: |
 #    #!/bin/bash -l
