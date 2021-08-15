@@ -36,6 +36,12 @@ class gen2generator:
         self.builder = self.templates['builder'].format(gitpath=self.gitpath,
                                                         setup=self.setup)
 
+        self.kw0 = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup,
+                    'collection': self.config.collection}
+
+        self.tasksToExecuteOrdered = ("tasks_to_execute_ordered_plots_only" if self.config.plotsOnly
+                                      else "tasks_to_execute_ordered")
+
     def get_logdir(self, task):
         self.logdir = self.templates['logdir'].format(rerun=self.rerun, task=task)
 
@@ -99,24 +105,24 @@ class gen2generator:
         return filter_str
 
     def task_filename_tract_filter(self, task, tract, filter, ext=''):
-        index = self.templates['tasks_to_execute_ordered'].index(task) + 1
+        index = self.templates[self.tasksToExecuteOrdered].index(task) + 1
         name = os.path.join(self.filepath, f"{index:02d}_{task}_{tract}_{filter}{ext}")
         return name
 
     def task_filename_tract(self, task, tract, ext=''):
-        index = self.templates['tasks_to_execute_ordered'].index(task) + 1
+        index = self.templates[self.tasksToExecuteOrdered].index(task) + 1
         name = os.path.join(self.filepath, f"{index:02d}_{task}_{tract}{ext}")
         return name
 
     def task_filename_task(self, task, ext=''):
-        index = self.templates['tasks_to_execute_ordered'].index(task) + 1
+        index = self.templates[self.tasksToExecuteOrdered].index(task) + 1
         name = os.path.join(self.filepath, f"{index:02d}_{task}{ext}")
         return name
 
     def task_per_task(self, task, ext=''):
         """ Format task per rerun/task only """
         self.outfiles = []
-        kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+        kw = self.kw0.copy()
         outfile = self.task_filename_task(task, ext=ext)
         self.outfiles.append(outfile)
         out = open(outfile, "w")
@@ -134,8 +140,7 @@ class gen2generator:
         outfile = None
         head_task = False
         head_tract = False
-        kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
-
+        kw = self.kw0.copy()
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
@@ -173,7 +178,7 @@ class gen2generator:
         head_tract = False
         filters_ignore = []
         tracts_ignore = []
-        kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+        kw = self.kw0.copy()
 
         if task in self.templates['tasks_ignore']:
             tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
@@ -195,7 +200,8 @@ class gen2generator:
                 self.outfiles.append(outfile)
                 out = open(outfile, "w")
             filter_str = self.get_filter_str(tract, task)
-            kw = {'rerun': self.rerun, 'filter_str': filter_str, 'tract': tract}
+            kw = {'rerun': self.rerun, 'filter_str': filter_str, 'tract': tract,
+                  'collection': self.config.collection}
             if task in self.templates['tasks_specs']:
                 kw.update(self.templates['tasks_specs'][task][tract])
             if 'multi' in self.templates['templates'][task]:
@@ -224,7 +230,7 @@ class gen2generator:
         head_tract = False
         filters_ignore = []
         tracts_ignore = []
-        kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+        kw = self.kw0.copy()
 
         if task in self.templates['tasks_ignore']:
             filters_ignore = self.templates['tasks_ignore'][task]['filters']
@@ -296,7 +302,7 @@ class gen2generator:
         filters_ignore = []
         tracts_ignore = []
         self.outfiles = []
-        kw = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup}
+        kw = self.kw0.copy()
 
         if task in self.templates['tasks_ignore']:
             filters_ignore = self.templates['tasks_ignore'][task]['filters']
@@ -401,7 +407,7 @@ class gen2generator:
             pass
 
         # Loop over tasks to execute
-        for task in self.templates['tasks_to_execute_ordered']:
+        for task in self.templates[self.tasksToExecuteOrdered]:
             ext = self.templates['tasks_extname'][task]
             print(f"# --- Preparing task: {task} ---- ")
             if task in self.templates['tasks_to_execute_slurm_multi']:
@@ -430,6 +436,9 @@ def cmdline():
                         help="The build week [i.e. w_2019_38]")
     parser.add_argument("--rerun2", action="store", required=True,
                         help="Name of the rerun to compare with")
+    parser.add_argument("--collection", action="store", required=True,
+                        help="Name of the Gen3 run collection to compare with, "
+                        "e.g. HSC/runs/RC2/w_2021_30/DM-31182")
     parser.add_argument("--dataset", action="store", default='config/RC2dataset.yaml',
                         help="yaml file with dataset description")
     parser.add_argument("--templates", action="store", default='config/RC2templates.yaml',
@@ -440,6 +449,8 @@ def cmdline():
                         help="The format for the output script files")
     parser.add_argument("--stack", action="store", default="stack",
                         help="The stack to use")
+    parser.add_argument("--plotsOnly", action="store", default=False,
+                        help="Whether to generate plotting (i.e. pipe_analysis) scripts only.")
 
     args = parser.parse_args()
     return args

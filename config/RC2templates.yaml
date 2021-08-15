@@ -183,7 +183,18 @@ templates:
     #SBATCH -J coAna{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
-    srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB  --rerun {rerun}  --id tract={tract} filter={filter} --no-versions -c doWriteParquetTables=True
+    srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB  --rerun {rerun}  --id tract={tract} filter={filter} --no-versions
+
+  coaddAnalysisGen3: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=15:00:00
+    #SBATCH -J coAnaGen3{tract}-{filter}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysisGen3-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysisGen3-{tract}-{filter}-%j.log
+    srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --collection {collection} --instrument HSC --id tract={tract} filter={filter} --no-versions
 
   colorAnalysis: |
     #!/bin/bash -l
@@ -194,7 +205,18 @@ templates:
     #SBATCH -J color{tract}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
-    srun colorAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB --rerun {rerun}  --id tract={tract} filter={filter_str} --no-versions -c doWriteParquetTables=True
+    srun colorAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} filter={filter_str} --no-versions
+
+  colorAnalysisGen3: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=16:00:00
+    #SBATCH -J colorGen3_{tract}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysisGen3-{tract}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysisGen3-{tract}-%j.log
+    srun colorAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --collection {collection} --instrument HSC --id tract={tract} filter={filter_str} --no-versions
 
   compareCoaddAnalysis: |
     #!/bin/bash -l
@@ -207,6 +229,17 @@ templates:
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
     srun compareCoaddAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions --id tract={tract} filter={filter}
 
+  compareToGen3CoaddAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=15:00:00
+    #SBATCH -J comToGen3Coadd{tract}-{filter}
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareToGen3CoaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareToGen3CoaddAnalysis-{tract}-{filter}-%j.log
+    srun compareCoaddAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --rerun2 /repo/main --collection {collection} --instrument HSC --no-versions --id tract={tract} filter={filter}
+
   matchedVisitMetrics: |
     #!/bin/bash -l
     #SBATCH -p normal
@@ -216,7 +249,7 @@ templates:
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm 
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm
 
   visitAnalysis:
     head_filter: |
@@ -228,7 +261,19 @@ templates:
       #SBATCH -J SBATCH -J va{tract}-{filter}
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} visitAnalysis.py /datasets/hsc/repo --rerun {rerun} --calib /datasets/hsc/repo/CALIB -c externalPhotoCalibName=fgcm --no-versions  --tract={tract} --id visit={visitID}"
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} -c externalPhotoCalibName=fgcm --no-versions --tract={tract} --id visit={visitID} filter={filter}"
+
+  visitAnalysisGen3:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=48:00:00
+      #SBATCH -J SBATCH -J va{tract}-{filter}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} visitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --collection {collection} --instrument HSC -c externalPhotoCalibName=fgcm --no-versions --tract={tract} --id visit={visitID} filter={filter}"
 
   compareVisitAnalysis:
     head_filter: |
@@ -238,11 +283,39 @@ templates:
       #SBATCH --ntasks-per-node={ntasks}
       #SBATCH --time=16:00:00
       #SBATCH -J cv{tract}-{filter}
-      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-%j.log
-      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.err
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
       srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions  --tract={tract} --id visit={visitID} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
+      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
+
+  compareToGen3VisitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=16:00:00
+      #SBATCH -J cToGen3v{tract}-{filter}
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --rerun2 /repo/main --collection {collection} --instrument HSC --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
+
+  compareToGen3VisitAnalysisNoExtCal:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=16:00:00
+      #SBATCH -J cToGen3vNoExtCal{tract}-{filter}
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3/noExtCal --rerun2 /repo/main --collection {collection} --instrument HSC --no-versions --tract={tract} --id visit={visitID} filter={filter} -c doApplyExternalSkyWcs1=False doApplyExternalPhotoCalib1=False doApplyExternalSkyWcs2=False doApplyExternalPhotoCalib2=False"
 
   matchVisits:
     head_task: |
@@ -325,7 +398,35 @@ tasks_specs:
       procs: 10
       time: 24000
 
+  visitAnalysis:
+    9813:
+      procs: 16
+    9697:
+      procs: 16
+    9615:
+      procs: 16
+  visitAnalysisGen3:
+    9813:
+      procs: 16
+    9697:
+      procs: 16
+    9615:
+      procs: 16
   compareVisitAnalysis:
+    9813:
+      procs: 16
+    9697:
+      procs: 16
+    9615:
+      procs: 16
+  compareToGen3VisitAnalysis:
+    9813:
+      procs: 16
+    9697:
+      procs: 16
+    9615:
+      procs: 16
+  compareToGen3VisitAnalysisNoExtCal:
     9813:
       procs: 16
     9697:
@@ -358,7 +459,7 @@ tasks_ignore:
     tracts:
       - 9697
       - 9615
-     
+
 
 # Extnames for tasks
 tasks_extname:
@@ -371,11 +472,17 @@ tasks_extname:
   multiBandDriver: '.sh'
   forcedPhotCcd: '.sl'
   visitAnalysis: '.sl'
+  visitAnalysisGen3: '.sl'
   writeObjectTable: '.sh'
   compareVisitAnalysis: '.sl'
+  compareToGen3VisitAnalysis: '.sl'
+  compareToGen3VisitAnalysisNoExtCal: '.sl'
   coaddAnalysis: '.sl'
+  coaddAnalysisGen3: '.sl'
   colorAnalysis: '.sl'
+  colorAnalysisGen3: '.sl'
   compareCoaddAnalysis: '.sl'
+  compareToGen3CoaddAnalysis: '.sl'
   matchVisits: '.sl'
   dispatch_verify_colorAnalysis: '.sh'
   dispatch_verify_coaddAnalysis: '.sh'
@@ -395,6 +502,12 @@ tasks_to_bundle:
   - coaddAnalysis
   - colorAnalysis
   - compareCoaddAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - compareToGen3VisitAnalysisNoExtCal
+  - coaddAnalysisGen3
+  - colorAnalysisGen3
+  - compareToGen3CoaddAnalysis
   - matchVisits
   - matchedVisitMetrics
   - validateDrp
@@ -411,6 +524,11 @@ tasks_per_tract_filter:
   - compareVisitAnalysis
   - coaddAnalysis
   - compareCoaddAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - compareToGen3VisitAnalysisNoExtCal
+  - coaddAnalysisGen3
+  - compareToGen3CoaddAnalysis
   - matchVisits
   - matchedVisitMetrics
   - dispatch_verify_coaddAnalysis
@@ -421,7 +539,7 @@ tasks_per_tract:
   - multiBandDriver
   - colorAnalysis
   - dispatch_verify_colorAnalysis
-  - colorAnalysis
+  - colorAnalysisGen3
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
@@ -432,6 +550,9 @@ tasks_per_task:
 tasks_to_execute_slurm_multi:
   - visitAnalysis
   - compareVisitAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - compareToGen3VisitAnalysisNoExtCal
 
 tasks_to_execute_slurm_loop:
   - matchVisits
@@ -468,3 +589,26 @@ tasks_to_execute_ordered:
   - transformObjectCatalog
   - consolidateObjectTable
   #- fakesDriver
+
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - compareToGen3VisitAnalysisNoExtCal
+  - coaddAnalysisGen3
+  - colorAnalysisGen3
+  - compareToGen3CoaddAnalysis
+
+tasks_to_execute_ordered_plots_only:
+  - visitAnalysis
+  - compareVisitAnalysis
+  - coaddAnalysis
+  - compareCoaddAnalysis
+  - colorAnalysis
+
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - compareToGen3VisitAnalysisNoExtCal
+  - coaddAnalysisGen3
+  - compareToGen3CoaddAnalysis
+  - colorAnalysisGen3
+  - dispatch_verify_coaddAnalysis
+  - dispatch_verify_colorAnalysis
