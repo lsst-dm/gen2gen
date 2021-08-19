@@ -2,6 +2,8 @@
 HSC-specific overrides for FgcmBuildStars
 """
 
+config.randomSeed = 23456
+
 # Minimum number of observations per band for a star to be considered for calibration
 config.minPerBand = 1
 # Match radius to associate stars from src catalogs (arcseconds)

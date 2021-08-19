@@ -52,28 +52,28 @@ SQUASH_USER=$USER
 SQUASH_password=*****
 
 # You should be ready to start running from the run directory (in your screen with the above setup) just run:
-source 01_makeSkyMap.sh 
+source 01_makeSkyMap.sh
 
 # The steps mostly need to be run sequentially. To automate I did:
 alias swait='while [ `squeue | grep $USER | wc -l` -gt 0 ]; do sleep 300; echo "Waiting".; done;'
 # swait waits until all jobs are done
-source 01_makeSkyMap.sh; swait source 02_singleFrameDriver.sh; swait source 03_jointcal.sh; swait source 04_skyCorrection.sh
+source 01_makeSkyMap.sh; swait source 02_singleFrameDriver.sh; swait source 03_consolidateSourceTable.sh; swait source 04_jointcal.sh; swait source 05_skyCorrection.sh
 # Will thus complete the first four steps (roughly 24 hours of processing)
 
-# After 03_jointcal.sh you need to run FGCM. In a separate screen (e.g. screen -S FGCM)
+# After 04_jointcal.sh you need to run FGCM. In a separate screen (e.g. screen -S FGCM)
 cd /THIS/DIRECTORY/FGCM/
 # Edit all_steps.sh to change WEEK and DM to the current week and DM
 source all_steps.sh
-# FGCM will take about 24 hours. You can run 04_skyCorrection.sh simultaneously. Check logs in
+# FGCM will take about 24 hours. You can run 05_skyCorrection.sh simultaneously. Check logs in
 # /datasets/hsc/repo/rerun/RC/${WEEK}/DM-${DM}/logs/FGCM
- 
-#After FGCM, just go to your RC2 screen and 
-source 05_visitAnalysis.sh
-#etc. Step 5-10 will take ~5 days
+
+#After FGCM, just go to your RC2 screen and
+source 06_visitAnalysis.sh
+#etc. Step 6-11 will take ~5 days
 
 # The remaining steps (post forced photometry) take ~1 day but require more log reading
 
-# Before running the steps that dispatch results to Squash (steps 15, 16 and 18), make sure following environment variables
+# Before running the steps that dispatch results to Squash (steps 16, 17 and 19), make sure following environment variables
 # are set (see https://pipelines.lsst.io/modules/lsst.verify/scripts/dispatch_verify.py.html)
 export DATASET="HSC RC2"
 export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-30424"
@@ -82,7 +82,7 @@ export RUN_ID_URL="https://jira.lsstcorp.org/browse/DM-30424"
 export VERSION_TAG="w_2021_22"
 
 # You need to regularly check logs. There's no good way to do this. Many scripts write to slurm logs so
-# tail sfm* 
+# tail sfm*
 # shows you the last few lines of all single frame processing jobs and will usually show you if they are okay.
 # similarly for tail coadd*, tail sky*, tail jointcal*, tail mt*
 # The names and locations of logs are listed in either the .sh script or its associated .sl or .mp files
@@ -100,4 +100,4 @@ ln -s /datasets/hsc/repo/rerun/RC/$WEEK/DM-$DM/plots /home/$USER/public_html/${W
 # Then run the script, which will copy logs from your run directory to the repo
 python  copy_log.py
 
-# Congratulations, you have made it through an arduous RC2. Now look at notes_RC2_fakes.txt  
+# Congratulations, you have made it through an arduous RC2. Now look at notes_RC2_fakes.txt
