@@ -442,6 +442,7 @@ task_list_all_visits:
 tasks_to_execute_ordered:
   - makeSkyMap
   - singleFrameDriver
+  - consolidateSourceTable
   - jointcal
   - skyCorrection
 
@@ -466,5 +467,4 @@ tasks_to_execute_ordered:
   - validateDrp
   - transformObjectCatalog
   - consolidateObjectTable
-  - consolidateSourceTable
   #- fakesDriver
