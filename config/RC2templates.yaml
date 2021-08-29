@@ -1,18 +1,31 @@
 # The setup to load up the stack
+
+# Need only be done once per screen
+#. /software/lsstsw/stack/loadLSST.bash
+#export OMP_NUM_THREADS=1
+#setup lsst_distrib -t {week}
+#setup -k -t {week} -v -r {gitpath}/pipe_analysis
+
 setup: |
   # Setup LSST stack for {week}
-  # Need only be done once per screen
-  #. /software/lsstsw/stack/loadLSST.bash
-  #export OMP_NUM_THREADS=1
-  #setup lsst_distrib -t {week}
-  #setup lsst_sims -k -t sims_{week}
-
-  #setup -k -t {week} -v -r {gitpath}/qa_explorer
-  #setup -k -t {week} -v -r {gitpath}/pipe_analysis
+  # Look for file in homedir defining SQuaSH envvars SQUASH_USER & SQUASH_PASSWORD
+  if [-e /home/${USER}/.squash_setup ]; then
+    echo "Reading SQuaSH credentials from /home/${USER}/.squash_setup"
+    source /home/${USER}/.squash_setup
+  else
+    echo "No /home/${USER}//.squash_setup file found.  Either make file and rerun or enter password."
+    read -p "Please enter the your SQUASH password: " SQUASH_PASSWORD
+    SQUASH_PASSWORD="${{SQUASH_PASSWORD}}"
+  fi
+  export DATASET="HSC_RC2"
+  export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-11345"
+  export RUN_ID="{DMticket}"
+  export RUN_ID_URL="https://jira.lsstcorp.org/browse/{DMticket}"
+  export VERSION_TAG="{week}"
+  export DATE_CREATED="{date_created}"
 
 setup_squash: |
-
-  export DATASET="HSC RC2"
+  export DATASET="HSC_RC2"
   export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-11345"
   export RUN_ID="{DMticket}"
   export RUN_ID_URL="https://jira.lsstcorp.org/browse/{DMticket}"
@@ -23,12 +36,11 @@ setup_squash: |
 
   read -p "Please enter the your SQUASH user [$USER]: " SQUASH_USER
   SQUASH_USER="${{SQUASH_USER:-$USER}}"
-
-  read -p "Please enter the your SQUASH password: " SQUASH_password
-  SQUASH_password="${{SQUASH_password}}"
+  read -p "Please enter the your SQUASH password: " SQUASH_PASSWORD
+  SQUASH_PASSWORD="${{SQUASH_PASSWORD}}"
 
   export $SQUASH_USER
-  export $SQUASH_password
+  export $SQUASH_PASSWORD
 
 
 gitcloner: |
@@ -249,7 +261,7 @@ templates:
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC-RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm
+    srun matchedVisitMetrics.py /datasets/hsc/repo/rerun/{rerun} --output  /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config doApplyExternalPhotoCalib=True doApplyExternalSkyWcs=True instrumentName='HSC' datasetName='HSC_RC2' --id tract={tract}  visit={visit} ccd=0..8^10..103 --config externalPhotoCalibName=fgcm
 
   visitAnalysis:
     head_filter: |
