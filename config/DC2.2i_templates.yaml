@@ -1,10 +1,9 @@
-
 # The setup to load up the stack
 setup: |
   # Setup LSST stack for {week}
-  export LSST_CONDA_ENV_NAME=my-env
-  .  /software/lsstsw/stack/loadLSST.bash
-  setup lsst_distrib -t {week}
+  # export LSST_CONDA_ENV_NAME=my-env
+  # .  /software/lsstsw/stack/loadLSST.bash
+  # setup lsst_distrib -t {week}
 
 gitcloner: |
   # Clone modules
@@ -12,7 +11,7 @@ gitcloner: |
   mkdir -p {gitpath}
 
   cd {gitpath}
-  git clone https://github.com/lsst-dm/qa_explorer
+  # git clone https://github.com/lsst-dm/qa_explorer
   git clone https://github.com/lsst-dm/pipe_analysis
 
   cd $CWD
@@ -21,17 +20,17 @@ builder: |
   # Make sure you run this before building:
   # scl enable devtoolset-8 bash
 
-  echo "---------------------------------"
-  echo " Make sure you run this before:"
-  echo "  scl enable devtoolset-8 bash"
-  echo "---------------------------------"
+  # echo "---------------------------------"
+  # echo " Make sure you run this before:"
+  # echo "  scl enable devtoolset-8 bash"
+  # echo "---------------------------------"
 
   {setup}
 
   CWD=$(pwd)
 
-  cd {gitpath}/qa_explorer
-  scons
+  # cd {gitpath}/qa_explorer
+  # scons
 
   cd {gitpath}/pipe_analysis
   scons
