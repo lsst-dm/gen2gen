@@ -30,6 +30,7 @@ setup_squash: |
   export RUN_ID="{DMticket}"
   export RUN_ID_URL="https://jira.lsstcorp.org/browse/{DMticket}"
   export VERSION_TAG="{week}"
+  export DATE_CREATED="{date_created}"
   echo "-------------------------------------------------------------------------------------"
   echo "Hello, "$USER".  This script will setup your SQUASH credentials on the environment   "
   echo "-------------------------------------------------------------------------------------"
@@ -41,7 +42,6 @@ setup_squash: |
 
   export $SQUASH_USER
   export $SQUASH_PASSWORD
-
 
 gitcloner: |
   # Clone modules
@@ -142,7 +142,7 @@ templates:
       {setup}
     multi: >-
       dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
-      --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw
+      --user $SQUASH_USER --password $SQUASH_PASSWORD --ignore-lsstsw --date-created {date_created}
       /datasets/hsc/repo/rerun/{rerun}/verify/{filter}/tract-{tract}/coaddAnalysis_verify_job.json
 
   dispatch_verify_colorAnalysis:
@@ -151,7 +151,7 @@ templates:
       {setup}
     multi: >-
       dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
-      --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw
+      --user $SQUASH_USER --password $SQUASH_PASSWORD --ignore-lsstsw --date-created {date_created}
       /datasets/hsc/repo/rerun/{rerun}/verify/color/tract-{tract}/colorAnalysis_verify_job.json
 
   dispatch_verify_matchedVisit:
@@ -159,8 +159,8 @@ templates:
       #!/bin/bash -l
       {setup}
     multi: >-
-      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf 
-      --user $SQUASH_USER --password $SQUASH_password --ignore-lsstsw --ignore-blobs
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      --user $SQUASH_USER --password $SQUASH_PASSWORD --ignore-lsstsw --ignore-blobs --date-created {date_created}
       /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json
 
 

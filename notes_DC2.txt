@@ -7,6 +7,9 @@
 # Team- Data Facility
 # Watchers- yusra
 # Epic Link- LOE: Periodic reprocessing of test data sets
+
+DATE_CREATED=2021-05-13T10:20:00Z  # obtained from https://eups.lsst.codes/stack/src/tags/
+
 WEEK=w_2021_20
 DM=30297
 

@@ -27,6 +27,7 @@ class DC2generator:
         # Get the setup string
         self.setup = self.templates['setup'].format(week=self.config.week,
                                                     stack=self.config.stack,
+                                                    date_created=self.config.date_created,
                                                     gitpath=self.gitpath)
         # Get the git cloner sctipt
         self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
@@ -97,7 +98,8 @@ class DC2generator:
         set_of_visits = get_chunks(self.data['visits']['all'], nvisit)
         for chunk in set_of_visits:
             visit_str = get_list_str(chunk)
-            kw = {'rerun': self.rerun, 'visit': visit_str, 'jobname': self.config.jobname}
+            kw = {'rerun': self.rerun, 'visit': visit_str, 'jobname': self.config.jobname,
+                  'date_created': self.config.date_created}
             if task in self.templates['tasks_specs']:
                 kw.update(self.templates['tasks_specs'][task])
             out.write(self.templates['templates'][task].format(**kw))
@@ -115,7 +117,8 @@ class DC2generator:
         set_of_visits = get_chunks(self.visits_tracts, nvisit)
         for chunk in set_of_visits:
             visit_str = get_list_str(chunk)
-            kw = {'rerun': self.rerun, 'visit': visit_str, 'jobname': self.config.jobname}
+            kw = {'rerun': self.rerun, 'visit': visit_str, 'jobname': self.config.jobname,
+                  'date_created': self.config.date_created}
             if task in self.templates['tasks_specs']:
                 kw.update(self.templates['tasks_specs'][task])
             out.write(self.templates['templates'][task].format(**kw))
@@ -127,7 +130,8 @@ class DC2generator:
         outfile = None
         head_task = False
         head_tract = False
-        kw = {'rerun': self.rerun, 'week': self.config.week, 'gitpath': self.gitpath}
+        kw = {'rerun': self.rerun, 'week': self.config.week, 'gitpath': self.gitpath,
+              'date_created': self.config.date_created}
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
@@ -186,7 +190,8 @@ class DC2generator:
         outfile = None
         head_task = False
         head_tract = False
-        kw = {'rerun': self.rerun, 'week': self.config.week, 'filter_str': filter_str, 'gitpath': self.gitpath}
+        kw = {'rerun': self.rerun, 'week': self.config.week, 'filter_str': filter_str,
+              'gitpath': self.gitpath', date_created': self.config.date_created}
 
         # Head per rerun
         if 'head_task' in self.templates['templates'][task]:
@@ -288,7 +293,11 @@ def cmdline():
     parser.add_argument("--DMticket", action="store", required=True,
                         help="The DM-ticket number [i.e.: DM-XXXX]")
     parser.add_argument("--week", action="store", required=True,
-                        help="The build week [i.e. w_2019_38]")
+                        help="The build week [e.g. w_2019_38]")
+    parser.add_argument("--date_created", action="store", required=True,
+                         help="The UTC of the weeklies build tag from "
+                         "https://eups.lsst.codes/stack/src/tags/ "
+                         "[e.g. 2019-09-21T08:17:00Z]")
     parser.add_argument("--dataset", action="store", default='config/DC2dataset.yaml',
                         help="yaml file with dataset description")
     parser.add_argument("--templates", action="store", default='config/DC2templates.yaml',

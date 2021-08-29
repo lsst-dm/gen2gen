@@ -29,6 +29,7 @@ class gen2generator:
         # Get the setup string
         self.setup = self.templates['setup'].format(week=self.config.week,
                                                     stack=self.config.stack,
+                                                    date_created=self.config.date_created,
                                                     gitpath=self.gitpath)
         # Get the git cloner sctipt
         self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
@@ -37,7 +38,8 @@ class gen2generator:
                                                         setup=self.setup)
 
         self.kw0 = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup,
-                    'collection': self.config.collection}
+                    'collection': self.config.collection, 'week': self.config.week,
+                    'date_created': self.config.date_created}
 
         self.tasksToExecuteOrdered = ("tasks_to_execute_ordered_plots_only" if self.config.plotsOnly
                                       else "tasks_to_execute_ordered")
@@ -201,7 +203,7 @@ class gen2generator:
                 out = open(outfile, "w")
             filter_str = self.get_filter_str(tract, task)
             kw = {'rerun': self.rerun, 'filter_str': filter_str, 'tract': tract,
-                  'collection': self.config.collection}
+                  'collection': self.config.collection, 'date_created': self.config.date_created}
             if task in self.templates['tasks_specs']:
                 kw.update(self.templates['tasks_specs'][task][tract])
             if 'multi' in self.templates['templates'][task]:
@@ -372,7 +374,8 @@ class gen2generator:
         sqfile = os.path.join(self.filepath, 'setup_squash.sh')
         with open(sqfile, "w") as c:
             sqstr = self.templates['setup_squash'].format(week=self.config.week,
-                                                          DMticket=self.config.DMticket)
+                                                          DMticket=self.config.DMticket,
+                                                          date_created=self.config.date_created)
             c.write(sqstr)
 
     def multiBandDriver_config(self):
@@ -433,7 +436,11 @@ def cmdline():
     parser.add_argument("--DMticket", action="store", required=True,
                         help="The DM-ticket number [i.e.: DM-XXXX]")
     parser.add_argument("--week", action="store", required=True,
-                        help="The build week [i.e. w_2019_38]")
+                        help="The build week [e.g. w_2019_38]")
+    parser.add_argument("--date_created", action="store", required=True,
+                        help="The UTC of the weeklies build tag from "
+                        "https://eups.lsst.codes/stack/src/tags/ "
+                        "[e.g. 2019-09-21T08:17:00Z]")
     parser.add_argument("--rerun2", action="store", required=True,
                         help="Name of the rerun to compare with")
     parser.add_argument("--collection", action="store", required=True,
