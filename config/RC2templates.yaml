@@ -88,7 +88,7 @@ templates:
     #!/bin/bash -l
     {setup}
 
-    makeSkyMap.py /datasets/hsc/repo --rerun {rerun}-sfm --calib /datasets/hsc/repo/CALIB
+    makeSkyMap.py /datasets/hsc/repo --rerun {rerun}-sfm --calib /datasets/hsc/repo/CALIB &> log_makeSkyMap_{week}
 
   singleFrameDriver:
     head_task: |
@@ -173,6 +173,7 @@ templates:
     #SBATCH --time=48:00:00
     #SBATCH -J jointcal{tract}-{filter}
     #SBATCH --output=jointcal{tract}-{filter}-%j.log
+    #SBATCH --error=jointcal{tract}-{filter}-%j.log
     srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} -c doPhotometry=False
 
   forcedPhotCcd: |
@@ -270,8 +271,10 @@ templates:
       #SBATCH -N 1
       #SBATCH --ntasks-per-node={ntasks}
       #SBATCH --time=48:00:00
-      #SBATCH -J SBATCH -J va{tract}-{filter}
-      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+      #SBATCH -J va{tract}-{filter}
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}_{tractname}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} visitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} -c externalPhotoCalibName=fgcm --no-versions --tract={tract} --id visit={visitID} filter={filter}"
 
@@ -282,8 +285,10 @@ templates:
       #SBATCH -N 1
       #SBATCH --ntasks-per-node={ntasks}
       #SBATCH --time=48:00:00
-      #SBATCH -J SBATCH -J va{tract}-{filter}
-      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{tractname}-%j-%2t.out --ntasks={ntasks} --multi-prog {mpfile}
+      #SBATCH -J vaGen3{tract}-{filter}
+      #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}_{tractname}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}_{tractname}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} visitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --collection {collection} --instrument HSC -c externalPhotoCalibName=fgcm --no-versions --tract={tract} --id visit={visitID} filter={filter}"
 
@@ -297,7 +302,7 @@ templates:
       #SBATCH -J cv{tract}-{filter}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
-      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}_{tractname}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --rerun2 {rerun2} --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
 
@@ -311,7 +316,7 @@ templates:
       #SBATCH -J cToGen3v{tract}-{filter}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}-{filter}-{kchunck}-%j.log
-      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}_{tractname}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3 --rerun2 /repo/main --collection {collection} --instrument HSC --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
 
@@ -325,7 +330,7 @@ templates:
       #SBATCH -J cToGen3vNoExtCal{tract}-{filter}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}-{filter}-{kchunck}-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}-{filter}-{kchunck}-%j.log
-      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}_{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+      srun --output /datasets/hsc/repo/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysisNoExtCal-{tract}_{tractname}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
       "{mpindex} compareVisitAnalysis.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}:{rerun}/vsGen3/noExtCal --rerun2 /repo/main --collection {collection} --instrument HSC --no-versions --tract={tract} --id visit={visitID} filter={filter} -c doApplyExternalSkyWcs1=False doApplyExternalPhotoCalib1=False doApplyExternalSkyWcs2=False doApplyExternalPhotoCalib2=False"
 
@@ -336,7 +341,7 @@ templates:
       #SBATCH -N 1
       #SBATCH --ntasks-per-node=1
       #SBATCH -t 12:00:00
-      #SBATCH -J matchVisits
+      #SBATCH -J matchVisits{tract}-{filter}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/matchVisits/matchVisits-%j.log
     multi:
@@ -349,11 +354,11 @@ templates:
       #SBATCH -N 1
       #SBATCH --ntasks-per-node=1
       #SBATCH -t 00:30:00
-      #SBATCH -J validateDrp
+      #SBATCH -J validateDrp{tract}
       #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/validateDrp/validateDrp-{tract}-%j.log
       #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/validateDrp/validateDrp-{tract}-%j.log
     multi:
-      srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json  --noplot
+      srun validateDrp.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json --noplot
     no_loop:
       srun reportPerformance.py /datasets/hsc/repo/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/*/matchedVisit_HSC*.json --output_file report_performance_{tract}.rst
 
