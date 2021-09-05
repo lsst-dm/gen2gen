@@ -68,10 +68,10 @@ templates:
     multi: >-
       sbatch $OPTIONS
       --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3828/{filter}
-      --config  instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract=3828 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
+      --config  instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract=3828 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
       sbatch $OPTIONS
       --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3829/{filter}
-      --config  instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract=3829 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
+      --config  instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract=3829 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
 
 #  matchedVisitMetrics: |
 #    #!/bin/bash -l
@@ -82,7 +82,7 @@ templates:
 #    #SBATCH -J mat-{tract}-{filter}
 #    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
 #    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-#    srun matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}  --config instrumentName='LSST-ImSim' datasetName='DC2' --id filter={filter} tract={tract} visit={visit}
+#    srun matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}  --config instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract={tract} visit={visit}
 
 
 # Extra specs per task beyond the template
