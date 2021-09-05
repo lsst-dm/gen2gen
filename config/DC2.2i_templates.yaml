@@ -1,9 +1,26 @@
 # The setup to load up the stack
+# Setup LSST stack for {week}
+# export LSST_CONDA_ENV_NAME=my-env
+# .  /software/lsstsw/stack/loadLSST.bash
+# setup lsst_distrib -t {week}
+
 setup: |
   # Setup LSST stack for {week}
-  # export LSST_CONDA_ENV_NAME=my-env
-  # .  /software/lsstsw/stack/loadLSST.bash
-  # setup lsst_distrib -t {week}
+  # Look for file in homedir defining SQuaSH envvars SQUASH_USER & SQUASH_PASSWORD
+  if [-e /home/${USER}/.squash_setup ]; then
+    echo "Reading SQuaSH credentials from /home/${USER}/.squash_setup"
+    source /home/${USER}/.squash_setup
+  else
+    echo "No /home/${USER}//.squash_setup file found.  Either make file and rerun or enter password."
+    read -p "Please enter the your SQUASH password: " SQUASH_PASSWORD
+    SQUASH_PASSWORD="${{SQUASH_PASSWORD}}"
+  fi
+  export DATASET="DC2_test-med-1"
+  export DATASET_REPO_URL="https://jira.lsstcorp.org/browse/DM-22954"
+  export RUN_ID="{DMticket}"
+  export RUN_ID_URL="https://jira.lsstcorp.org/browse/{DMticket}"
+  export VERSION_TAG="{week}"
+  export DATE_CREATED={date_created}
 
 gitcloner: |
   # Clone modules
@@ -17,14 +34,6 @@ gitcloner: |
   cd $CWD
 
 builder: |
-  # Make sure you run this before building:
-  # scl enable devtoolset-8 bash
-
-  # echo "---------------------------------"
-  # echo " Make sure you run this before:"
-  # echo "  scl enable devtoolset-8 bash"
-  # echo "---------------------------------"
-
   {setup}
 
   CWD=$(pwd)
@@ -36,14 +45,23 @@ builder: |
   scons
   cd $CWD
 
+logdir: |
+  /datasets/DC2/repoRun2.2i/rerun/{rerun}/logs/{task}
+
+qalogdir: |
+  /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/{task}
+
 templates:
 
-  singleFrameDriver: >
-    singleFrameDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --batch-type slurm
-    --mpiexec='-bind-to socket' --job {jobname} --cores 24 --time 900  --id visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_2021_12.py;
+  singleFrameDriver:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      singleFrameDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --batch-type slurm
+      --mpiexec='-bind-to socket' --job dc2sfm_{filter}_{tract}_{week} --cores 24 --time 900  --id visit={visit} --configfile /home/$USER/DC2/filter_config_2021_12.py -c doMakeSourceTable=True doSaveWideSourceTable=True;
 
   makeSkyMap: >
-    makeSkyMap.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --no-versions >& log_makeSkyMap_{weeknumber}
+    makeSkyMap.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --no-versions >& log_makeSkyMap_{week}
 
   coaddDriver:
     head_task: |
@@ -51,42 +69,217 @@ templates:
     multi: >-
       coaddDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun}/coadd
       --batch-type=slurm --mpiexec='-bind-to socket' --time 600 --cores 24
-      --job coadd{filter}{tract} --id filter={filter} tract={tract} --selectId visit={visit};
+      --job coadd_{filter}_{tract}_{week} --id filter={filter} tract={tract} --selectId visit={visit};
 
   multiBandDriver:
     head_task: |
       #!/bin/bash -l
     multi: >-
       multiBandDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/coadd:{rerun}/multi --batch-type=slurm --mpiexec='-bind-to socket'
-      --job mt{tract}-{patch} --core 1 --time 45000 -c measureCoaddSources.propagateFlags.ccdName='detector'
-      --id filter={filter_str} tract={tract} patch={patch_alt} --configfile /home/$USER/HSC/DC2/filter_config_multi.py;
+      --job mt{tract} --nodes 12 --procs 6 --time 45000 -c measureCoaddSources.propagateFlags.ccdName='detector'
+      --id filter={filter_str} tract={tract} --configfile /home/$USER/DC2/filter_config_multi.py;
 
-  matchedVisitMetrics:
+  matchedVisitMetrics: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH -t 09:00:00
+    #SBATCH -J mat-{tract}-{filter}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
+    srun matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter} --config instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract={tract} visit={visit}
+
+  dispatch_verify_matchedVisit:
     head_task: |
       #!/bin/bash -l
-      OPTIONS="-p normal -N 1 --ntasks-per-node=1 -t 24:00:00"
+      {setup}
     multi: >-
-      sbatch $OPTIONS
-      --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3828/{filter}
-      --config  instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract=3828 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
-      sbatch $OPTIONS
-      --wrap="matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/3829/{filter}
-      --config  instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract=3829 visit={visit} --configfile /home/$USER/HSC/DC2/filter_config_multi.py";
+      dispatch_verify.py --url https://squash-restful-api.lsst.codes --env ldf
+      --user $SQUASH_USER --password $SQUASH_PASSWORD --ignore-lsstsw --ignore-blobs --date-created {date_created}
+      /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}/matchedVisit_{filter}.json
 
-#  matchedVisitMetrics: |
-#    #!/bin/bash -l
-#    #SBATCH -p normal
-#    #SBATCH -N 1
-#    #SBATCH --ntasks-per-node=1
-#    #SBATCH -t 09:00:00
-#    #SBATCH -J mat-{tract}-{filter}
-#    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-#    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
-#    srun matchedVisitMetrics.py /datasets/DC2/repoRun2.2i/rerun/{rerun}/multi --output  /datasets/DC2/repoRun2.2i/rerun/{rerun}/validateDrp/matchedVisitMetrics/{tract}/{filter}  --config instrumentName='LSSTCam-imSim' datasetName='DC2_test-med-1' --id filter={filter} tract={tract} visit={visit}
+  visitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=48:00:00
+      #SBATCH -J va{tract}-{filter}
+      #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} visitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun} --no-versions --tract={tract} --id visit={visitID} filter={filter}"
+
+  visitAnalysisGen3:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=48:00:00
+      #SBATCH -J vaGen3{tract}-{filter}
+      #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} visitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun}/vsGen3 --collection {collection} --instrument LSSTCam-imSim --no-versions --tract={tract} --id visit={visitID} filter={filter}"
+
+  compareVisitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=16:00:00
+      #SBATCH -J cv{tract}-{filter}
+      #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun} --rerun2 {rerun2} --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
+
+  compareToGen3VisitAnalysis:
+    head_filter: |
+      #!/bin/bash -l
+      #SBATCH -p normal
+      #SBATCH -N 1
+      #SBATCH --ntasks-per-node={ntasks}
+      #SBATCH --time=16:00:00
+      #SBATCH -J cToGen3v{tract}-{filter}
+      #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}-{filter}-{kchunck}-%j.log
+      #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}-{filter}-{kchunck}-%j.log
+      srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
+    multi:
+      "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun}/vsGen3 --rerun2 /repo/dc2 --collection {collection} --instrument LSSTCam-imSim --no-versions --tract={tract} --id visit={visitID} filter={filter} -c doApplyExternalSkyWcs1=False doApplyExternalPhotoCalib1=False doApplyExternalSkyWcs2=False doApplyExternalPhotoCalib2=False"
+
+  writeObjectTable:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      writeObjectTable.py  /datasets/DC2/repoRun2.2i --rerun {rerun}/multi --id tract={tract} filter={filter_str} -j 4
+  transformObjectCatalog:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      transformObjectCatalog.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi --id tract={tract} -j 4
+  consolidateObjectTable:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      consolidateObjectTable.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi --id tract={tract} -j 4
+  consolidateSourceTable:
+    head_task: |
+      #!/bin/bash -l
+    multi: >-
+      consolidateSourceTable.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --id visit={visit}  &> consolidateSource_{tract}.log &
+
+  coaddAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=15:00:00
+    #SBATCH -J coAna{tract}-{filter}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
+    srun coaddAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi:{rerun} --id tract={tract} filter={filter} --no-versions -c doReadParquetTables=True
+
+  coaddAnalysisGen3: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=15:00:00
+    #SBATCH -J coAnaGen3{tract}-{filter}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysisGen3-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysisGen3-{tract}-{filter}-%j.log
+    srun coaddAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi:{rerun}/vsGen3 --collection {collection} --instrument LSSTCam-imSim --id tract={tract} filter={filter} --no-versions
+
+  colorAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=16:00:00
+    #SBATCH -J color{tract}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysis-{tract}-%j.log
+    srun colorAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi:{rerun} --id tract={tract} filter={filter_str} --no-versions -c doReadParquetTables=True
+
+  colorAnalysisGen3: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=16:00:00
+    #SBATCH -J colorGen3_{tract}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysisGen3-{tract}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/colorAnalysis/colorAnalysisGen3-{tract}-%j.log
+    srun colorAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi:{rerun}/vsGen3 --collection {collection} --instrument LSSTCam-imSim --id tract={tract} filter={filter_str} --no-versions
+
+  compareCoaddAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=15:00:00
+    #SBATCH -J comCoadd{tract}-{filter}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareCoaddAnalysis-{tract}-{filter}-%j.log
+    srun compareCoaddAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi:{rerun} --rerun2 {rerun2} --no-versions --id tract={tract} filter={filter} -c doReadParquetTables1=True
+
+  compareToGen3CoaddAnalysis: |
+    #!/bin/bash -l
+    #SBATCH -p normal
+    #SBATCH -N 1
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --time=15:00:00
+    #SBATCH -J comToGen3Coadd{tract}-{filter}
+    #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareToGen3CoaddAnalysis-{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareCoaddAnalysis/compareToGen3CoaddAnalysis-{tract}-{filter}-%j.log
+    srun compareCoaddAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/multi:{rerun}/vsGen3 --rerun2 /repo/dc2 --collection {collection} --instrument LSSTCam-imSim --no-versions --id tract={tract} filter={filter} -c doReadParquetTables1=True
 
 
 # Extra specs per task beyond the template
 tasks_specs:
+  visitAnalysis:
+    3828:
+      procs: 12
+    3829:
+      procs: 12
+  visitAnalysisGen3:
+    3828:
+      procs: 12
+    3829:
+      procs: 12
+
+  compareVisitAnalysis:
+    3828:
+      procs: 6
+    3829:
+      procs: 6
+
+  compareToGen3VisitAnalysis:
+    3828:
+      procs: 6
+    3829:
+      procs: 6
+
+tasks_logdir:
+  empty
+
+tasks_qalogdir:
+  - visitAnalysis
+  - coaddAnalysis
+  - colorAnalysis
+  - compareVisitAnalysis
+  - compareCoaddAnalysis
+  - matchedVisitMetrics
+
+tasks_ignore:
   empty
 
 # Extnames for tasks
@@ -95,23 +288,98 @@ tasks_extname:
   singleFrameDriver: '.sh'
   coaddDriver: '.sh'
   multiBandDriver: '.sh'
-  matchedVisitMetrics: '.sh'
+  dispatch_verify_matchedVisit: '.sh'
+  writeObjectTable: '.sh'
+  visitAnalysis: '.sl'
+  visitAnalysisGen3: '.sl'
+  compareVisitAnalysis: '.sl'
+  compareToGen3VisitAnalysis: '.sl'
+  coaddAnalysis: '.sl'
+  coaddAnalysisGen3: '.sl'
+  colorAnalysis: '.sl'
+  colorAnalysisGen3: '.sl'
+  compareCoaddAnalysis: '.sl'
+  compareToGen3CoaddAnalysis: '.sl'
+  matchedVisitMetrics: '.sl'
+  transformObjectCatalog: '.sh'
+  consolidateObjectTable: '.sh'
+  consolidateSourceTable: '.sh'
 
-tasks_per_visit_tracts:
-  - singleFrameDriver
+# Tasks to bunde
+tasks_to_bundle:
+  - visitAnalysis
+  - compareVisitAnalysis
+  - coaddAnalysis
+  - colorAnalysis
+  - compareCoaddAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - coaddAnalysisGen3
+  - colorAnalysisGen3
+  - compareToGen3CoaddAnalysis
+  - matchedVisitMetrics
+
+# tasks_per_visit_tracts:
+#  - singleFrameDriver
 
 tasks_per_tract_filter:
+  - singleFrameDriver
   - coaddDriver
   - matchedVisitMetrics
-tasks_per_tract_patch:
+  - dispatch_verify_matchedVisit
+  - visitAnalysis
+  - compareVisitAnalysis
+  - coaddAnalysis
+  - compareCoaddAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - coaddAnalysisGen3
+  - compareToGen3CoaddAnalysis
+
+# tasks_per_tract_patch:
+tasks_per_tract:
   - multiBandDriver
+  - colorAnalysis
+  - colorAnalysisGen3
+  - writeObjectTable
+  - transformObjectCatalog
+  - consolidateObjectTable
 
 tasks_per_task:
   - makeSkyMap
 
+tasks_to_execute_slurm_multi:
+  - visitAnalysis
+  - compareVisitAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+
+tasks_to_execute_slurm_loop:
+  empty
+
+task_list_all_visits:
+  -consolidateSourceTable
+
 tasks_to_execute_ordered:
-  - singleFrameDriver
   - makeSkyMap
+  - singleFrameDriver
+  - consolidateSourceTable
+
+  - visitAnalysis
+  - compareVisitAnalysis
+
   - coaddDriver
   - multiBandDriver
   - matchedVisitMetrics
+  - dispatch_verify_matchedVisit
+  - writeObjectTable
+  - transformObjectCatalog
+  - consolidateObjectTable
+  - coaddAnalysis
+  - colorAnalysis
+  - compareCoaddAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - coaddAnalysisGen3
+  - colorAnalysisGen3
+  - compareToGen3CoaddAnalysis
