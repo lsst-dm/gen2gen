@@ -10,8 +10,14 @@
 
 DATE_CREATED=2021-05-13T10:20:00Z  # obtained from https://eups.lsst.codes/stack/src/tags/
 
-WEEK=w_2021_20
-DM=30297
+WEEK=w_2021_36
+DM=DM-31665
+
+# Previous week for rerun2 in pipe_analysis comparison plots
+WEEK_PREV=w_2021_32
+DM_PREV=DM-31351
+
+GEN3_COLLECTION=2.2i/runs/test-med-1/${WEEK}/DM-31699
 
 # Basic Setup, confirm the week's stack you want is ready
 export LSST_CONDA_ENV_NAME=my-env
@@ -22,24 +28,26 @@ eups list lsst_distrib
 setup lsst_distrib $WEEK
 
 # Setting up the gen2 RC2 scripts and copying some config files
-mkdir -p /home/$USER/HSC/DC2
-cp filter_config_multi.py /home/$USER/HSC/DC2/.
-cp filter_config_2021_12.py /home/$USER/HSC/DC2/.
+mkdir -p /home/$USER/DC2
+cp filter_config_multi.py /home/$USER/DC2/.
+cp filter_config_2021_12.py /home/$USER/DC2/.
+# ./gen2-DC2-generator --DMticket ${DM} --week ${WEEK} --filepath /home/$USER/DC2/{DM} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
 
-./gen2-DC2-generator --DMticket DM-${DM} --week ${WEEK} --filepath /home/$USER/HSC/DC2//{DMticket} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
+python gen2-DC2-generator_lam.py --DMticket ${DM} --week ${WEEK} --rerun2 ${WEEK_PREV}/${DM_PREV} --collection ${GEN3_COLLECTION} --filepath /home/$USER/DC2/${DM} --date_created ${DATE_CREATED} --templates config/DC2.2i_templates.yaml --dataset config/DC2.2i_dataset.yaml
 
-cd /home/$USER/HSC/DC2/DM-$DM
-scl enable devtoolset-8 bash
+
+cd /home/$USER/DC2/${DM}
+# scl enable devtoolset-8 bash
 
 # scl kills your setup and variables, so after reassigning week IDENTICALLY to above, we setup our stack
-WEEK=w_2021_20
-source /software/lsstsw/stack/loadLSST.bash
-setup lsst_distrib $WEEK
+# WEEK=w_2021_20
+# source /software/lsstsw/stack/loadLSST.bash
+# setup lsst_distrib $WEEK
 
 # You should be ready to start running from the run directory (in your screen with the above setup) just run:
 source 01_singleFrameDriver.sh;
 
-# The steps mostly need to be run sequentially. To automate I did:
+# The steps mostly need to be run sequentially. To automate I (EricM) did:
 alias swait='while [ `squeue | grep $USER | wc -l` -gt 0 ]; do sleep 300; echo "Waiting".; done;'
 # swait waits until all jobs are done
 source 01_singleFrameDriver.sh; swait source 02_makeSkyMap.sh; swait source 03_coaddDriver.sh; swait source04_multiBandDriver.sh; swait source 05_matchedVisitMetrics.sh
