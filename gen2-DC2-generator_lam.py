@@ -1,0 +1,461 @@
+#!/usr/bin/env python3
+
+import yaml
+import types
+import os
+import argparse
+
+
+class gen2generator:
+    """ A class to generate LSST Gen2 scipts"""
+
+    def __init__(self, **keys):
+        # Load the configurarion
+        self.config = types.SimpleNamespace(**keys)
+
+        # Read in yaml dataset conf manifest
+        self.load_dataset()
+        # Read in yaml templates conf manifest
+        self.load_templates()
+        # Define rerun
+        self.get_rerun()
+        # And the outpath
+        self.filepath = self.config.filepath.format(week=self.config.week, DMticket=self.config.DMticket)
+        if not os.path.exists(self.filepath):
+            os.makedirs(self.filepath)
+            print(f"# Created dirname:{self.filepath}")
+        # The git clone path
+        self.gitpath = os.path.join(self.filepath, 'git')
+        # Get the setup string
+        self.setup = self.templates['setup'].format(week=self.config.week,
+                                                    stack=self.config.stack,
+                                                    DMticket=self.config.DMticket,
+                                                    date_created=self.config.date_created,
+                                                    gitpath=self.gitpath)
+        # Get the git cloner sctipt
+        self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
+
+        self.builder = self.templates['builder'].format(gitpath=self.gitpath,
+                                                        setup=self.setup)
+
+        self.kw0 = {'rerun': self.rerun, 'rerun2': self.config.rerun2, 'setup': self.setup,
+                    'collection': self.config.collection, 'week': self.config.week,
+                    'date_created': self.config.date_created}
+
+        self.tasksToExecuteOrdered = ("tasks_to_execute_ordered_plots_only" if self.config.plotsOnly
+                                      else "tasks_to_execute_ordered")
+
+    def get_logdir(self, task):
+        self.logdir = self.templates['logdir'].format(rerun=self.rerun, task=task)
+
+    def get_qalogdir(self, task):
+        self.qalogdir = self.templates['qalogdir'].format(rerun=self.rerun, task=task)
+
+    def mk_bundle_sh(self, task):
+        shfile = self.task_filename_task(task, ext='.sh')
+        with open(shfile, "w") as sh:
+            # sh.write(f"{self.setup}\n")
+            # Write the call to mkdir
+            if task in self.templates['tasks_logdir']:
+                self.get_logdir(task)
+                sh.write(f"mkdir -p {self.logdir}")
+            elif task in self.templates['tasks_qalogdir']:
+                self.get_qalogdir(task)
+                sh.write(f"mkdir -p {self.qalogdir}")
+            for outfile in self.outfiles:
+                sh.write(f"sbatch {outfile}\n")
+        print(f"# file: {shfile} is ready")
+
+    def load_dataset(self):
+        # Load up the manifest
+        with open(self.config.dataset) as f:
+            self.data = yaml.load(f, Loader=yaml.FullLoader)
+        print(f"# Loaded dataset definitions from: {self.config.dataset}")
+
+    def load_templates(self):
+        # Load up the manifest
+        with open(self.config.templates) as f:
+            self.templates = yaml.load(f, Loader=yaml.FullLoader)
+        print(f"# Loaded dataset templates from: {self.config.templates}")
+
+    def get_rerun(self):
+        # Define the rerun
+        self.rerun = self.config.rerun_format.format(week=self.config.week, DMticket=self.config.DMticket)
+        print(f"# Defined rerun as: {self.rerun}")
+
+    def get_visit_str(self, tract, filter):
+        # get the visit in the format we need
+        visit_str = "^".join([str(i) for i in self.data['visits'][tract][filter]])
+        return visit_str
+
+    def get_all_visits_per_tract_str(self, tract):
+        # get all visits per tract in right format
+        all_visits = []
+        for f in self.data['visits'][tract]:
+            all_visits.append(self.data['visits'][tract][f])
+        all_visits = [item for sublist in all_visits for item in sublist]
+        filter_str = "^".join([str(i) for i in all_visits])
+        return filter_str
+
+    def get_filter_str(self, tract, task):
+        # get the filter in the format we need
+        filters = self.data['visits'][tract]
+        filters_ignore = []
+        if task in self.templates['tasks_ignore']:
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+        filters_in = list(filter(lambda a: a not in filters_ignore, filters))
+        filter_str = "^".join([str(i) for i in filters_in])
+        return filter_str
+
+    def task_filename_tract_filter(self, task, tract, filter, ext=''):
+        index = self.templates[self.tasksToExecuteOrdered].index(task) + 1
+        name = os.path.join(self.filepath, f"{index:02d}_{task}_{tract}_{filter}{ext}")
+        return name
+
+    def task_filename_tract(self, task, tract, ext=''):
+        index = self.templates[self.tasksToExecuteOrdered].index(task) + 1
+        name = os.path.join(self.filepath, f"{index:02d}_{task}_{tract}{ext}")
+        return name
+
+    def task_filename_task(self, task, ext=''):
+        index = self.templates[self.tasksToExecuteOrdered].index(task) + 1
+        name = os.path.join(self.filepath, f"{index:02d}_{task}{ext}")
+        return name
+
+    def task_per_task(self, task, ext=''):
+        """ Format task per rerun/task only """
+        self.outfiles = []
+        kw = self.kw0.copy()
+        outfile = self.task_filename_task(task, ext=ext)
+        self.outfiles.append(outfile)
+        out = open(outfile, "w")
+        out.write(self.templates['templates'][task].format(**kw))
+        out.close()
+        print(f"# file: {outfile} is ready")
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def task_list_all_visits(self, task, ext=''):
+        """ Format a task per tract only """
+        self.outfiles = []
+        outfile = None
+        head_task = False
+        head_tract = False
+        kw = self.kw0.copy()
+
+        # Head per rerun
+        if 'head_task' in self.templates['templates'][task]:
+            outfile = self.task_filename_task(task, ext=ext)
+            self.outfiles.append(outfile)
+            out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['head_task'].format(**kw))
+            head_task = True
+
+        for tract in self.data['visits'].keys():
+            visits = self.get_all_visits_per_tract_str(tract)
+            kw.update({'visit': visits, 'tract': tract})
+
+            if not head_task and not head_tract:
+                outfile = self.task_filename_tract(task, tract, ext=ext)
+                self.outfiles.append(outfile)
+                out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+            # close file accordingly by tract
+
+        # close file accordingly by task
+        if head_task:
+            out.close()
+            print(f"# file: {outfile} is ready")
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def task_per_tract(self, task, ext=''):
+        """ Format a task per tract only """
+        self.outfiles = []
+        outfile = None
+        head_task = False
+        head_tract = False
+        filters_ignore = []
+        tracts_ignore = []
+        kw = self.kw0.copy()
+
+        if task in self.templates['tasks_ignore']:
+            tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+
+        # Head per rerun
+        if 'head_task' in self.templates['templates'][task]:
+            outfile = self.task_filename_task(task, ext=ext)
+            self.outfiles.append(outfile)
+            out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['head_task'].format(**kw))
+            head_task = True
+        for tract in self.data['visits'].keys():
+            if tract in tracts_ignore:
+                print(f"Skipping {tract}")
+                continue
+            if not head_task and not head_tract:
+                outfile = self.task_filename_tract(task, tract, ext=ext)
+                self.outfiles.append(outfile)
+                out = open(outfile, "w")
+            filter_str = self.get_filter_str(tract, task)
+            kw = {'rerun': self.rerun, 'filter_str': filter_str, 'tract': tract,
+                  'collection': self.config.collection, 'date_created': self.config.date_created}
+            if task in self.templates['tasks_specs']:
+                kw.update(self.templates['tasks_specs'][task][tract])
+            if 'multi' in self.templates['templates'][task] and '/multi' not in self.templates['templates'][task]:
+                out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+            else:
+                out.write(self.templates['templates'][task].format(**kw) + '\n')
+            # close file accordingly by tract
+            if head_tract:
+                out.close()
+                print(f"# file: {outfile} is ready")
+
+        # close file accordingly by task
+        if head_task:
+            out.close()
+            print(f"# file: {outfile} is ready")
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def task_per_tract_filter(self, task, ext=''):
+        """ Format a task per tract and filter"""
+        self.outfiles = []
+        outfile = None
+        head_task = False
+        head_tract = False
+        filters_ignore = []
+        tracts_ignore = []
+        kw = self.kw0.copy()
+
+        if task in self.templates['tasks_ignore']:
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+            tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
+
+        # Head per rerun
+        if 'head_task' in self.templates['templates'][task]:
+            outfile = self.task_filename_task(task, ext=ext)
+            self.outfiles.append(outfile)
+            out = open(outfile, "w")
+            out.write(self.templates['templates'][task]['head_task'].format(**kw))
+            head_task = True
+
+        for tract in self.data['visits'].keys():
+            if tract in tracts_ignore:
+                print(f"Skipping {tract}")
+                continue
+            # Head per tract
+            if 'head_tract' in self.templates['templates'][task]:
+                outfile = self.task_filename_tract(task, tract, ext=ext)
+                self.outfiles.append(outfile)
+                out = open(outfile, "w")
+                kw.update({'tract': tract})
+                out.write(self.templates['templates'][task]['head_tract'].format(**kw))
+                head_tract = True
+            for filter in self.data['visits'][tract].keys():
+                if filter in filters_ignore:
+                    print(f"Skipping {filter}")
+                    continue
+                if not head_task and not head_tract:
+                    outfile = self.task_filename_tract_filter(task, tract, filter, ext=ext)
+                    self.outfiles.append(outfile)
+                    out = open(outfile, "w")
+                # get the visit in the format we need
+                visit = self.get_visit_str(tract, filter)
+                kw.update({'visit': visit, 'filter': filter, 'tract': tract})
+                if task in self.templates['tasks_specs']:
+                    kw.update(self.templates['tasks_specs'][task][tract])
+
+                if 'multi' in self.templates['templates'][task] and '/multi' not in self.templates['templates'][task]:
+                    out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+                else:
+                    out.write(self.templates['templates'][task].format(**kw) + '\n')
+                # close file per filter
+                if not head_task and not head_tract:
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+
+            # Out the loop print
+            if 'no_loop' in self.templates['templates'][task]:
+                out.write(self.templates['templates'][task]['no_loop'].format(**kw))
+
+            # close file accordingly by tract
+            if head_tract:
+                out.close()
+                print(f"# file: {outfile} is ready")
+
+        # close file accordingly by task
+        if head_task:
+            out.close()
+            print(f"# file: {outfile} is ready")
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def task_per_tract_filter_visit_multi(self, task, ext='', NP=24):
+        """ Format a task per tract/filter/visit for multi-progran slurm"""
+        filters_ignore = []
+        tracts_ignore = []
+        self.outfiles = []
+        kw = self.kw0.copy()
+
+        if task in self.templates['tasks_ignore']:
+            filters_ignore = self.templates['tasks_ignore'][task]['filters']
+            tracts_ignore = self.templates['tasks_ignore'][task]['tracts']
+
+        # Loop over tracts
+        for tract in self.data['visits'].keys():
+            if tract in tracts_ignore:
+                print(f"Skipping {tract}")
+                continue
+
+            # Get the max number of processor/workers
+            if task in self.templates['tasks_specs'] and 'procs' in self.templates['tasks_specs'][task][tract]:
+                procs = self.templates['tasks_specs'][task][tract]['procs']
+            else:
+                procs = NP
+
+            # Loop over filters
+            for filter in self.data['visits'][tract].keys():
+                if filter in filters_ignore:
+                    print(f"Skipping {filter}")
+                    continue
+                # Me make chunks of lenght of NP
+                visitID_chunks = get_chunks(self.data['visits'][tract][filter], procs)
+
+                kchunck = 0
+                for chunk in visitID_chunks:
+                    # One file per filter and tract
+                    outfile = self.task_filename_tract_filter(task, tract, filter, ext=f"_{kchunck:02d}{ext}")
+                    self.outfiles.append(outfile)
+                    out = open(outfile, "w")
+                    # get the visit in the format we need
+                    visit = self.get_visit_str(tract, filter)
+                    # ntasks = len(self.data['visits'][tract][filter])
+                    ntasks = len(visitID_chunks[kchunck])
+                    mpfile = self.task_filename_tract_filter(task, tract, filter,
+                                                             ext=f"_{kchunck:02d}" + '.mp')
+                    # Create the dict with kwargs
+                    kw.update({'visit': visit, 'filter': filter, 'tract': tract, 'kchunck': f"{kchunck:02d}",
+                               'ntasks': ntasks, 'mpfile': mpfile})
+                    # Extra info per task
+                    if task in self.templates['tasks_specs']:
+                        kw.update(self.templates['tasks_specs'][task][tract])
+                    # The head subtemplate of the slurm
+                    out.write(self.templates['templates'][task]['head_filter'].format(**kw))
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+                    # Loop over each visit
+                    # The multiprog template of the slurm goes on separate file
+                    outfile = mpfile
+                    out = open(outfile, "w")
+                    mpindex = 0
+                    for visitID in visitID_chunks[kchunck]:
+                        kw.update({'mpindex': mpindex, 'visitID': visitID})
+                        out.write(self.templates['templates'][task]['multi'].format(**kw) + '\n')
+                        mpindex += 1
+                    out.close()
+                    print(f"# file: {outfile} is ready")
+                    kchunck += 1
+
+        # Make bundle rerun_script
+        if task in self.templates['tasks_to_bundle']:
+            self.mk_bundle_sh(task)
+
+    def setup_squash(self):
+        sqfile = os.path.join(self.filepath, 'setup_squash.sh')
+        with open(sqfile, "w") as c:
+            sqstr = self.templates['setup_squash'].format(week=self.config.week,
+                                                          DMticket=self.config.DMticket,
+                                                          date_created=self.config.date_created)
+            c.write(sqstr)
+
+    def multiBandDriver_config(self):
+        sqfile = os.path.join(self.filepath, 'multiBandDriver_config.py')
+        with open(sqfile, "w") as c:
+            sqstr = self.templates['multiBandDriver_config'].format(week=self.config.week,
+                                                          DMticket=self.config.DMticket)
+            c.write(sqstr)
+
+    def gitcloner(self):
+        clonerfile = os.path.join(self.filepath, 'cloner.sh')
+        with open(clonerfile, "w") as c:
+            c.write(self.cloner)
+        print(f"# file: {clonerfile} is ready")
+
+    def scons_builder(self):
+        builderfile = os.path.join(self.filepath, 'builder.sh')
+        with open(builderfile, "w") as c:
+            c.write(self.builder)
+        print(f"# file: {builderfile} is ready")
+
+    def do_tasks(self):
+        self.gitcloner()
+        self.scons_builder()
+
+        # Loop over tasks to execute
+        for task in self.templates[self.tasksToExecuteOrdered]:
+            ext = self.templates['tasks_extname'][task]
+            print(f"# --- Preparing task: {task} ---- ")
+            if task in self.templates['tasks_to_execute_slurm_multi']:
+                self.task_per_tract_filter_visit_multi(task, ext=ext)
+            elif task in self.templates['tasks_per_tract_filter']:
+                self.task_per_tract_filter(task, ext=ext)
+            elif task in self.templates['tasks_per_tract']:
+                self.task_per_tract(task, ext=ext)
+            elif task in self.templates['tasks_per_task']:
+                self.task_per_task(task, ext=ext)
+            elif task in self.templates['task_list_all_visits']:
+                self.task_list_all_visits(task, ext=ext)
+            else:
+                exit(f"ERROR: task: {task} NOT defined on task type")
+
+
+def get_chunks(mylist, n):
+    return [mylist[i: i+n] for i in range(0, len(mylist), n)]
+
+
+def cmdline():
+    parser = argparse.ArgumentParser(description="Gen2 Generation script")
+    parser.add_argument("--DMticket", action="store", required=True,
+                        help="The DM-ticket number [i.e.: DM-XXXX]")
+    parser.add_argument("--week", action="store", required=True,
+                        help="The build week [e.g. w_2019_38]")
+    parser.add_argument("--date_created", action="store", required=True,
+                        help="The UTC of the weeklies build tag from "
+                        "https://eups.lsst.codes/stack/src/tags/ "
+                        "[e.g. 2019-09-21T08:17:00Z]")
+    parser.add_argument("--rerun2", action="store", required=True,
+                        help="Name of the rerun to compare with")
+    parser.add_argument("--collection", action="store", required=True,
+                        help="Name of the Gen3 run collection to compare with, "
+                        "e.g.  2.2i/runs/test-med-1/w_2021_32/DM-31348")
+    parser.add_argument("--dataset", action="store", default='config/DC2.2i_dataset.yaml',
+                        help="yaml file with dataset description")
+    parser.add_argument("--templates", action="store", default='config/DC2.2i_templates.yaml',
+                        help="yaml file with template description")
+    parser.add_argument("--rerun_format", action="store", default="{week}/{DMticket}",
+                        help="The format for the rerun path")
+    parser.add_argument("--filepath", action="store", default="rerun_scripts/{DMticket}",
+                        help="The format for the output script files")
+    parser.add_argument("--stack", action="store", default="stack",
+                        help="The stack to use")
+    parser.add_argument("--plotsOnly", action="store", default=False,
+                        help="Whether to generate plotting (i.e. pipe_analysis) scripts only.")
+
+    args = parser.parse_args()
+    return args
+
+
+if __name__ == "__main__":
+    args = cmdline()
+    gen2 = gen2generator(**args.__dict__)
+    gen2.do_tasks()
