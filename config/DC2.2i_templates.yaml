@@ -7,11 +7,11 @@
 setup: |
   # Setup LSST stack for {week}
   # Look for file in homedir defining SQuaSH envvars SQUASH_USER & SQUASH_PASSWORD
-  if [-e /home/${USER}/.squash_setup ]; then
-    echo "Reading SQuaSH credentials from /home/${USER}/.squash_setup"
-    source /home/${USER}/.squash_setup
+  if [ -e /home/$USER/.squash_setup ]; then
+    echo "Reading SQuaSH credentials from /home/$USER/.squash_setup"
+    source /home/$USER/.squash_setup
   else
-    echo "No /home/${USER}//.squash_setup file found.  Either make file and rerun or enter password."
+    echo "No /home/$USER/.squash_setup file found.  Either make file and rerun or enter password."
     read -p "Please enter the your SQUASH password: " SQUASH_PASSWORD
     SQUASH_PASSWORD="${{SQUASH_PASSWORD}}"
   fi
@@ -58,7 +58,7 @@ templates:
       #!/bin/bash -l
     multi: >-
       singleFrameDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --batch-type slurm
-      --mpiexec='-bind-to socket' --job dc2sfm_{filter}_{tract}_{week} --cores 24 --time 900  --id visit={visit} --configfile /home/$USER/DC2/filter_config_2021_12.py -c doMakeSourceTable=True doSaveWideSourceTable=True;
+      --mpiexec='-bind-to socket' --job dc2sfm_{filter}_{tract}_{week} --cores 24 --time 900  --id visit={visit};
 
   makeSkyMap: >
     makeSkyMap.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm --no-versions >& log_makeSkyMap_{week}
@@ -76,15 +76,14 @@ templates:
       #!/bin/bash -l
     multi: >-
       multiBandDriver.py /datasets/DC2/repoRun2.2i --rerun {rerun}/coadd:{rerun}/multi --batch-type=slurm --mpiexec='-bind-to socket'
-      --job mt{tract} --nodes 12 --procs 6 --time 45000 -c measureCoaddSources.propagateFlags.ccdName='detector'
-      --id filter={filter_str} tract={tract} --configfile /home/$USER/DC2/filter_config_multi.py;
+      --job mt{tract} --nodes 12 --procs 6 --time 45000 --id filter={filter_str} tract={tract};
 
   matchedVisitMetrics: |
     #!/bin/bash -l
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH -t 09:00:00
+    #SBATCH -t 19:00:00
     #SBATCH -J mat-{tract}-{filter}
     #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/matchedVisitMetrics/matchedVisitMetrics-{tract}-{filter}-%j.log
@@ -111,6 +110,7 @@ templates:
       #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{filter}-{kchunck}-%j.log
       srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysis-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
+      # "{mpindex} visitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun} --no-versions --tract={tract} --id visit={visitID} filter={filter}"
       "{mpindex} visitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun} --no-versions --tract={tract} --id visit={visitID} filter={filter}"
 
   visitAnalysisGen3:
@@ -125,6 +125,7 @@ templates:
       #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{filter}-{kchunck}-%j.log
       srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/visitAnalysis/visitAnalysisGen3-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
+      # "{mpindex} visitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}:{rerun}/vsGen3 --collection {collection} --instrument LSSTCam-imSim --no-versions --tract={tract} --id visit={visitID} filter={filter}"
       "{mpindex} visitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun}/vsGen3 --collection {collection} --instrument LSSTCam-imSim --no-versions --tract={tract} --id visit={visitID} filter={filter}"
 
   compareVisitAnalysis:
@@ -139,7 +140,8 @@ templates:
       #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}-{filter}-{kchunck}-%j.log
       srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareVisitAnalysis-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
-      "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun} --rerun2 {rerun2} --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm"
+      # "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun} --rerun2 {rerun2} --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm -c doReadParquetTables1=False doReadParquetTables2=False"
+      "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun} --rerun2 {rerun2} --no-versions --tract={tract} --id visit={visitID} filter={filter} -c externalPhotoCalibName1=fgcm externalPhotoCalibName2=fgcm doReadParquetTables1=False doReadParquetTables2=False"
 
   compareToGen3VisitAnalysis:
     head_filter: |
@@ -153,6 +155,7 @@ templates:
       #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}-{filter}-{kchunck}-%j.log
       srun --output /datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/compareVisitAnalysis/compareToGen3VisitAnalysis-{tract}-{filter}.out --ntasks={ntasks} --multi-prog {mpfile}
     multi:
+      # "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}:{rerun}/vsGen3 --rerun2 /repo/dc2 --collection {collection} --instrument LSSTCam-imSim --no-versions --tract={tract} --id visit={visitID} filter={filter} -c doApplyExternalSkyWcs1=False doApplyExternalPhotoCalib1=False doApplyExternalSkyWcs2=False doApplyExternalPhotoCalib2=False -c doReadParquetTables1=False doReadParquetTables2=False"
       "{mpindex} compareVisitAnalysis.py /datasets/DC2/repoRun2.2i --rerun {rerun}/sfm:{rerun}/vsGen3 --rerun2 /repo/dc2 --collection {collection} --instrument LSSTCam-imSim --no-versions --tract={tract} --id visit={visitID} filter={filter} -c doApplyExternalSkyWcs1=False doApplyExternalPhotoCalib1=False doApplyExternalSkyWcs2=False doApplyExternalPhotoCalib2=False"
 
   writeObjectTable:
@@ -181,7 +184,7 @@ templates:
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH --time=15:00:00
+    #SBATCH --time=25:00:00
     #SBATCH -J coAna{tract}-{filter}
     #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
@@ -192,7 +195,7 @@ templates:
     #SBATCH -p normal
     #SBATCH -N 1
     #SBATCH --ntasks-per-node=1
-    #SBATCH --time=15:00:00
+    #SBATCH --time=25:00:00
     #SBATCH -J coAnaGen3{tract}-{filter}
     #SBATCH --output=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysisGen3-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/DC2/repoRun2.2i/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysisGen3-{tract}-{filter}-%j.log
@@ -375,6 +378,18 @@ tasks_to_execute_ordered:
   - writeObjectTable
   - transformObjectCatalog
   - consolidateObjectTable
+  - coaddAnalysis
+  - colorAnalysis
+  - compareCoaddAnalysis
+  - visitAnalysisGen3
+  - compareToGen3VisitAnalysis
+  - coaddAnalysisGen3
+  - colorAnalysisGen3
+  - compareToGen3CoaddAnalysis
+
+tasks_to_execute_ordered_plots_only:
+  - visitAnalysis
+  - compareVisitAnalysis
   - coaddAnalysis
   - colorAnalysis
   - compareCoaddAnalysis

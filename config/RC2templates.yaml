@@ -9,11 +9,11 @@
 setup: |
   # Setup LSST stack for {week}
   # Look for file in homedir defining SQuaSH envvars SQUASH_USER & SQUASH_PASSWORD
-  if [-e /home/${USER}/.squash_setup ]; then
-    echo "Reading SQuaSH credentials from /home/${USER}/.squash_setup"
-    source /home/${USER}/.squash_setup
+  if [ -e /home/$USER/.squash_setup ]; then
+    echo "Reading SQuaSH credentials from /home/$USER/.squash_setup"
+    source /home/$USER/.squash_setup
   else
-    echo "No /home/${USER}//.squash_setup file found.  Either make file and rerun or enter password."
+    echo "No /home/$USER/.squash_setup file found.  Either make file and rerun or enter password."
     read -p "Please enter the your SQUASH password: " SQUASH_PASSWORD
     SQUASH_PASSWORD="${{SQUASH_PASSWORD}}"
   fi
@@ -36,9 +36,9 @@ setup_squash: |
   echo "-------------------------------------------------------------------------------------"
 
   read -p "Please enter the your SQUASH user [$USER]: " SQUASH_USER
-  SQUASH_USER="${{SQUASH_USER:-$USER}}"
+  SQUASH_USER="${SQUASH_USER:-$USER}"
   read -p "Please enter the your SQUASH password: " SQUASH_PASSWORD
-  SQUASH_PASSWORD="${{SQUASH_PASSWORD}}"
+  SQUASH_PASSWORD="${SQUASH_PASSWORD}"
 
   export $SQUASH_USER
   export $SQUASH_PASSWORD
@@ -86,23 +86,22 @@ templates:
   # Simple bash templates w/slurm hooks
   makeSkyMap: |
     #!/bin/bash -l
-    {setup}
 
     makeSkyMap.py /datasets/hsc/repo --rerun {rerun}-sfm --calib /datasets/hsc/repo/CALIB &> log_makeSkyMap_{week}
 
   singleFrameDriver:
     head_task: |
       #!/bin/bash -l
-      {setup}
+
     multi: >-
       singleFrameDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
       --rerun {rerun}-sfm --batch-type slurm --mpiexec='-bind-to socket'
-      --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103
+      --job sfm{tract}{filter} --cores 70 --time 900 --id visit={visit} ccd=0..8^10..103 --no-versions
 
   fakesDriver:
     head_task: |
       #!/bin/bash -l
-      {setup}
+
     multi: >-
       processCcdWithFakesDriver.py /datasets/hsc/repo
       --rerun RC/v20_0_0_rc1/DM-25349:private/madamow/cosmosFakes --batch-type slurm --mpiexec='-bind-to socket'
@@ -112,29 +111,29 @@ templates:
   skyCorrection:
     head_task: |
       #!/bin/bash -l
-      {setup}
+
     multi: >-
       skyCorrection.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB
       --rerun {rerun}-sfm --batch-type=slurm --mpiexec='-bind-to socket' --time 90
-      --cores 24 --id visit={visit} --job sky{tract}{filter}
+      --cores 24 --id visit={visit} --job sky{tract}{filter} --no-versions
   coaddDriver:
     head_task: |
       #!/bin/bash -l
-      {setup}
+
     multi: >-
       coaddDriver.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}
       --batch-type=slurm --mpiexec='-bind-to socket' --job coadd{tract}{filter} --time {time}
       --cores 24  --id tract={tract}  filter={filter} --selectId ccd=0..8^10..103 visit={visit}
-      --config makeCoaddTempExp.externalPhotoCalibName=fgcm assembleCoadd.externalPhotoCalibName=fgcm assembleCoadd.assembleStaticSkyModel.externalPhotoCalibName=fgcm
+      --config makeCoaddTempExp.externalPhotoCalibName=fgcm assembleCoadd.externalPhotoCalibName=fgcm assembleCoadd.assembleStaticSkyModel.externalPhotoCalibName=fgcm --no-versions
 
   multiBandDriver:
     head_task: |
       #!/bin/bash -l
-      {setup}
+
     multi: >-
       multiBandDriver.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB/
       --rerun {rerun} --batch-type=slurm --mpiexec='-bind-to socket' --job mt{tract}
-      --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str}
+      --nodes {nodes} --procs {procs} --time {time} --id tract={tract} filter={filter_str} --no-versions
 
   dispatch_verify_coaddAnalysis:
     head_task: |
@@ -172,9 +171,9 @@ templates:
     #SBATCH --ntasks-per-node=1
     #SBATCH --time=48:00:00
     #SBATCH -J jointcal{tract}-{filter}
-    #SBATCH --output=jointcal{tract}-{filter}-%j.log
-    #SBATCH --error=jointcal{tract}-{filter}-%j.log
-    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} -c doPhotometry=False
+    #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/jointcal/jointcal{tract}-{filter}-%j.log
+    #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/jointcal/jointcal{tract}-{filter}-%j.log
+    srun jointcal.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm:{rerun} --id ccd=0..8^10..103 visit={visit} filter={filter} tract={tract} -c doPhotometry=False --no-versions
 
   forcedPhotCcd: |
     #!/bin/bash -l
@@ -185,7 +184,7 @@ templates:
     #SBATCH -J frCcd{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/logs/forcedPhotCcd/frCcd-{tract}-{filter}-%j.log
-    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit} -c externalPhotoCalibName=fgcm
+    srun forcedPhotCcd.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB  --rerun {rerun} -j 12  --id ccd=0..8^10..103 tract={tract} visit={visit} -c externalPhotoCalibName=fgcm --no-versions
 
   coaddAnalysis: |
     #!/bin/bash -l
@@ -196,7 +195,7 @@ templates:
     #SBATCH -J coAna{tract}-{filter}
     #SBATCH --output=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
     #SBATCH --error=/datasets/hsc/repo/rerun/{rerun}/qaLogs/coaddAnalysis/coaddAnalysis-{tract}-{filter}-%j.log
-    srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB  --rerun {rerun}  --id tract={tract} filter={filter} --no-versions
+    srun coaddAnalysis.py /datasets/hsc/repo/ --calib /datasets/hsc/repo/CALIB  --rerun {rerun}  --id tract={tract} filter={filter} --no-versions --no-versions
 
   coaddAnalysisGen3: |
     #!/bin/bash -l
@@ -365,28 +364,24 @@ templates:
   writeObjectTable:
     head_task: |
       #!/bin/bash -l
-      {setup}
     multi: >-
       writeObjectTable.py  /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} filter={filter_str} -j 4
 
   transformObjectCatalog:
     head_task: |
       #!/bin/bash -l
-      {setup}
     multi: >-
       transformObjectCatalog.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
   consolidateObjectTable:
     head_task: |
       #!/bin/bash -l
-      {setup}
     multi: >-
       consolidateObjectTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun} --id tract={tract} -j 4
 
   consolidateSourceTable:
     head_task: |
       #!/bin/bash -l
-      {setup}
     multi: >-
       consolidateSourceTable.py /datasets/hsc/repo --calib /datasets/hsc/repo/CALIB --rerun {rerun}-sfm --id visit={visit}  &> consolidateSource_{tractname}.log &
 
@@ -454,6 +449,7 @@ tasks_specs:
 # tasks with logdirs
 
 tasks_logdir:
+  - jointcal
   - forcedPhotCcd
   - validateDrp
 
@@ -482,7 +478,7 @@ tasks_ignore:
 tasks_extname:
   makeSkyMap: '.sh'
   singleFrameDriver: '.sh'
-  jointcal: '.sh'
+  jointcal: '.sl'
   fakesDriver: '.sh'
   skyCorrection: '.sh'
   coaddDriver: '.sh'
@@ -500,7 +496,7 @@ tasks_extname:
   colorAnalysisGen3: '.sl'
   compareCoaddAnalysis: '.sl'
   compareToGen3CoaddAnalysis: '.sl'
-  matchVisits: '.sl'
+  # matchVisits: '.sl'
   dispatch_verify_colorAnalysis: '.sh'
   dispatch_verify_coaddAnalysis: '.sh'
   matchedVisitMetrics: '.sl'
@@ -525,7 +521,7 @@ tasks_to_bundle:
   - coaddAnalysisGen3
   - colorAnalysisGen3
   - compareToGen3CoaddAnalysis
-  - matchVisits
+  # - matchVisits
   - matchedVisitMetrics
   - validateDrp
 
@@ -572,7 +568,8 @@ tasks_to_execute_slurm_multi:
   - compareToGen3VisitAnalysisNoExtCal
 
 tasks_to_execute_slurm_loop:
-  - matchVisits
+  None
+  # - matchVisits
 
 task_list_all_visits:
   -consolidateSourceTable
@@ -596,7 +593,7 @@ tasks_to_execute_ordered:
   - colorAnalysis
   - compareCoaddAnalysis
 
-  - matchVisits
+  # - matchVisits
 
   - dispatch_verify_colorAnalysis
   - dispatch_verify_coaddAnalysis

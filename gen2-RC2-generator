@@ -30,7 +30,8 @@ class gen2generator:
         self.setup = self.templates['setup'].format(week=self.config.week,
                                                     stack=self.config.stack,
                                                     date_created=self.config.date_created,
-                                                    gitpath=self.gitpath)
+                                                    gitpath=self.gitpath,
+                                                    DMticket=self.config.DMticket)
         # Get the git cloner sctipt
         self.cloner = self.templates['gitcloner'].format(gitpath=self.gitpath)
 
@@ -53,7 +54,7 @@ class gen2generator:
     def mk_bundle_sh(self, task):
         shfile = self.task_filename_task(task, ext='.sh')
         with open(shfile, "w") as sh:
-            sh.write(f"{self.setup}\n")
+            # sh.write(f"{self.setup}\n")
             # Write the call to mkdir
             if task in self.templates['tasks_logdir']:
                 self.get_logdir(task)
@@ -243,6 +244,8 @@ class gen2generator:
             outfile = self.task_filename_task(task, ext=ext)
             self.outfiles.append(outfile)
             out = open(outfile, "w")
+            print(self.templates['templates'][task]['head_task'])
+            print(kw)
             out.write(self.templates['templates'][task]['head_task'].format(**kw))
             head_task = True
 

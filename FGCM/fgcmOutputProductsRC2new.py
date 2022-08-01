@@ -30,7 +30,7 @@ config.doComposeWcsJacobian=True
 config.refObjLoader.pixelMargin=300
 
 # Default reference catalog filter to use if filter not specified in exposure; if blank then filter must be specified in exposure
-config.refObjLoader.defaultFilter='g, r, i, z, N921, y'
+# config.refObjLoader.defaultFilter='g, r, i, z, N921, y'
 
 # Mapping of camera filter name: reference catalog filter name; each reference filter must exist
 config.refObjLoader.filterMap={}
